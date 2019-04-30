@@ -129,14 +129,15 @@ ch_metrics <- function(x){
   CHmedian <- sapply(x, median, na.rm=TRUE)
   CHmean <- sapply(x, mean, na.rm=TRUE)
   CHsd <- sapply(x, sd, na.rm=TRUE)
+  CHiqr <- sapply(x, IQR, na.rm=TRUE)
   CHvar <- sapply(x, var, na.rm=TRUE)
   CHsum <- sapply(x, sum, na.rm=TRUE)
   CHskew <- sapply(x, skewness, na.rm=TRUE)
   CHkurt <- sapply(x, kurtosis, na.rm=TRUE)
-  CHcrr <- sakpply(x, crr)
+  CHcrr <- sapply(x, crr)
   CHrange <- sapply(x, range, na.rm=TRUE)
   CHrange <- CHrange[2,]-CHrange[1,]
-  cropHeightDF <- data.frame(plots=plots$id, median= CHmedian, mean=CHmean, sd = CHsd, var = CHvar, sum = CHsum, skew = CHskew, kurt= CHkurt, PlotCRR = CHcrr, chRange = CHrange)
+  cropHeightDF <- data.frame(plots=plots$id, median= CHmedian, mean=CHmean, sd = CHsd, iqr = CHiqr, var = CHvar, sum = CHsum, skew = CHskew, kurt= CHkurt, PlotCRR = CHcrr, chRange = CHrange)
   cropHeightDF
   # Normalize data
   # norm_ch <- as.data.frame(scale(cropHeightDF[,2:10]))
@@ -159,14 +160,14 @@ pct_10_90_df <- function(x){
   top_yield_all <- do.call(c, top_yield)
   top_yield_all <- as.data.frame(top_yield_all)
   names(top_yield_all) <- "height"
-  top_yield_all$group <- "top"
+  top_yield_all$group <- "90th percentile yield"
   
   bottom_plots <- c('203', '202','205', '204', '212')
   bottom_yield <- x[bottom_plots]
   bottom_yield_all <- do.call(c, bottom_yield)
   bottom_yield_all <- as.data.frame(bottom_yield_all)
   names(bottom_yield_all) <- "height"
-  bottom_yield_all$group <- "bottom"
+  bottom_yield_all$group <- "10th percentile yield"
   
   pct_10_90_yield <- rbind(top_yield_all, bottom_yield_all)
 }
@@ -178,14 +179,21 @@ library(ggplot2)
 
 hist_10_90 <- function(x){
   height_mean <- ddply(x, "group", summarise, height.mean=mean(height))
-  
-  ggplot(x, aes(x=height, fill=group)) +
-    geom_histogram(binwidth=.03, alpha=.5, position="identity") +
-    geom_vline(data=height_mean, aes(xintercept=height.mean,  colour=group),
-               linetype="dashed", size=1)
+  height_median <- ddply(x, "group", summarise, height.median=median(height))
+  ggplot(x, aes(x=height, fill=group, color=group)) +
+    geom_histogram(binwidth=.03, position="identity", alpha=0.7) +
+    geom_vline(data=height_median, aes(xintercept=height.median,  colour=group), linetype="solid", size=1) +
+    scale_color_grey()+scale_fill_grey() +
+    theme_classic() + labs(x="Crop Height (m)", y = "Count") + theme(legend.position= c(0.2,0.8), legend.spacing.x = unit(0.3, 'cm'), 
+                                                                     legend.spacing.y = unit(0.2, 'cm'), legend.text = element_text(size=18),
+                                                                     legend.title = element_blank(),
+                                                                     axis.title.x = element_text(size=18, face="bold"),
+                                                                     axis.text=element_text(size=14),
+                                                                     axis.title.y = element_text(size=18, face="bold"))
 }
 
 lapply(pct_10_90_df_list, hist_10_90)
+
 
 #--------------------------------------------------------- rumple index -----------------------------------------------------------------
 library(lidR)
@@ -294,28 +302,35 @@ plots_20cm <- merge(plots_20cm, autocor_df_list[[4]], by.x="id", by.y="plots")
 
 # ------------------------------------Plot variables ------------------------------------------
 
-imp_vars <- c("mean", "median", "skew", "kurt", "sd", "crrsd", "crrmean", "moran", "Trt", "AUDPC", "watersum", "PlotCRR", "rumple") 
+imp_vars <- c("mean", "median", "skew", "iqr", "kurt", "sd", "crrsd", "crrmean", "moran", "Trt", "AUDPC", "watersum", "PlotCRR", "rumple") 
 
-plot(plots_1cm$mean, plots_1cm$BuAc)
-plot(plots_1cm$median, plots_1cm$BuAc)
-plot(plots_1cm$sum, plots_1cm$BuAc)
-plot(plots_1cm$skew, plots_1cm$BuAc)
-plot(plots_1cm$kurt, plots_1cm$BuAc)
-plot(plots_1cm$sd, plots_1cm$BuAc)
-plot(plots_1cm$crrmean, plots_1cm$BuAc)
-plot(plots_1cm$crrsd, plots_1cm$BuAc)
-plot(plots_1cm$PlotCRR, plots_1cm$BuAc)
-plot(plots_1cm$moran, plots_1cm$BuAc)
-plot(plots_1cm$geary, plots_1cm$BuAc)
-tmp <- lm(BuAc~median, data=plots_5cm)
-summary(tmp)
-#plot(plots_1cm$sill, plots_1cm$BuAc)
-#plot(plots_1cm$range, plots_1cm$BuAc)
-plot(plots_1cm$Trt, plots_1cm$BuAc)
-plot(plots_1cm$AUDPC, plots_1cm$BuAc)
-plot(plots_1cm$watersum, plots_1cm$BuAc)
-plot(plots_1cm$watersd, plots_1cm$BuAc)
-plot(plots_1cm$rumple, plots_1cm$BuAc)
+pairs(BuAc~median+skew+crrsd+crrmean+kurt+Trt+AUDPC+rumple+geary+iqr,data=plots_5cm, lower.panel = NULL, 
+      main="Simple Scatterplot Matrix")
+
+par(mfrow=c(2,4), mar=c(5, 6, 2, 3))
+
+#plot(plots_5cm$mean, plots_5cm$BuAc)
+plot(plots_5cm$median, plots_5cm$BuAc, xlab = "Median Height (m)", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+#plot(plots_5cm$sum, plots_5cm$BuAc)
+plot(plots_5cm$iqr, plots_5cm$BuAc, xlab = "Interquartile Range (m)", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+plot(plots_5cm$rumple, plots_5cm$BuAc, xlab = "Rumple Index", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+plot(plots_5cm$skew, plots_5cm$BuAc, xlab = "Skewness", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+plot(plots_5cm$kurt, plots_5cm$BuAc, xlab = "Kurtosis", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+#plot(plots_5cm$sd, plots_5cm$BuAc)
+plot(plots_5cm$crrmean, plots_5cm$BuAc, xlab = "Canopy Relief Ratio Mean", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+plot(plots_5cm$crrsd, plots_5cm$BuAc, xlab = "Canopy Relief Ratio Standard Deviation", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+#plot(plots_5cm$PlotCRR, plots_5cm$BuAc)
+#plot(plots_5cm$moran, plots_5cm$BuAc)
+plot(plots_5cm$geary, plots_5cm$BuAc, xlab = "Geary's C", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+#tmp <- lm(BuAc~median, data=plots_5cm)
+#summary(tmp)
+#plot(plots_5cm$sill, plots_5cm$BuAc)
+#plot(plots_5cm$range, plots_5cm$BuAc)
+#plot(plots_5cm$Trt, plots_5cm$BuAc)
+#plot(plots_5cm$AUDPC, plots_5cm$BuAc, xlab = "AUDPC", ylab = "Yield (bu/ac)")
+#plot(plots_5cm$watersum, plots_5cm$BuAc)
+#plot(plots_5cm$watersd, plots_5cm$BuAc)
+
 
 # ggplot(data = plots_1cm, aes(x = carat, y = price)) + 
 #   geom_point(aes(color = clarity), alpha = 0.3, position = "jitter")+
@@ -344,30 +359,33 @@ histogram(plots_5cm$geary, nint=20)
 
 #----------------------------------------------- Statistical models ---------------------------------------------------------
 
-# All : mean+median+sd+skew+PlotCRR+crrsd+crrmean+kurt+moran+Trt+AUDPC+watersum+rumple+geary
+# All : mean+median+sd+skew+PlotCRR+crrsd+crrmean+kurt+moran+Trt+AUDPC+watersum+rumple+geary+iqr
 
-# Post colinearity: median+skew+PlotCRR+crrsd+crrmean+Trt+AUDPC+watersum+rumple+geary
+# Post colinearity 
+# 1cm: median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watersum+geary+iqr
+# 5cm: median+PlotCRR+crrmean+Trt+AUDPC+watersum+geary+iqr
+# 10cm: median+PlotCRR+crrsd+crrmean+moran+Trt+AUDPC+watersum
 
 # normalize data
-norm_1cm <- as.data.frame(scale(plots_1cm@data[,c(10, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34)]))
+norm_1cm <- as.data.frame(scale(plots_1cm@data[,c(10, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35)]))
 norm_1cm$Trt <- plots_1cm$Trt
 norm_1cm$id <- plots_1cm$id
 
-norm_5cm <- as.data.frame(scale(plots_5cm@data[,c(10, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34)]))
+norm_5cm <- as.data.frame(scale(plots_5cm@data[,c(10, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35)]))
 norm_5cm$Trt <- plots_5cm$Trt
 norm_5cm$id <- plots_5cm$id
 
-norm_10cm <- as.data.frame(scale(plots_10cm@data[,c(10, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34)]))
+norm_10cm <- as.data.frame(scale(plots_10cm@data[,c(10, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35)]))
 norm_10cm$Trt <- plots_10cm$Trt
 norm_10cm$id <- plots_10cm$id
 
-norm_20cm <- as.data.frame(scale(plots_20cm@data[,c(10, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34)]))
+norm_20cm <- as.data.frame(scale(plots_20cm@data[,c(10, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35)]))
 norm_20cm$Trt <- plots_20cm$Trt
 norm_20cm$id <- plots_20cm$id
 
 # 1cm
 library(olsrr)
-ols_yield_1cm <- lm(BuAc ~ median+skew+PlotCRR+crrsd+crrmean+Trt+AUDPC+watersum+rumple+geary, data=norm_1cm)
+ols_yield_1cm <- lm(BuAc ~  median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watersum+geary+iqr, data=norm_1cm)
 ols_coll_diag(ols_yield_1cm)
 norm_1cm$ols_yi_res <- ols_yield_1cm$residuals
 summary(ols_yield_1cm)
@@ -396,7 +414,7 @@ abline(a=0, b=1, lty=2, col=2)
 
 # 5cm
 
-ols_yield_5cm <- lm(BuAc ~median+skew+PlotCRR+crrsd+crrmean+moran+Trt+AUDPC+watersum+rumple, data=norm_5cm)
+ols_yield_5cm <- lm(BuAc ~ median+skew+crrsd+crrmean+Trt+AUDPC+watersum+geary+rumple, data=norm_5cm)
 ols_coll_diag(ols_yield_5cm)
 norm_5cm$ols_yi_res <- ols_yield_5cm$residuals
 summary(ols_yield_5cm)
@@ -404,7 +422,7 @@ summary(ols_yield_5cm)
 w <- knn2nb(knearneigh(coordinates(plots), k=8))
 moran.test(norm_5cm$ols_yi_res, nb2listw(w))
 
-sp_err_yi_5cm <- errorsarlm(BuAc ~ median+crrsd+Trt+rumple+geary, data = norm_5cm, listw = nb2listw(w), zero.policy = T)
+sp_err_yi_5cm <- errorsarlm(BuAc ~median+Trt+geary, data = norm_5cm, listw = nb2listw(w), zero.policy = T)
 summary(sp_err_yi_5cm)
 norm_5cm$sp_err_resi <- sp_err_yi_5cm$residuals
 moran.test(norm_5cm$sp_err_resi, nb2listw(w))
@@ -425,14 +443,15 @@ abline(a=0, b=1, lty=2, col=2)
 
 # 10cm
 
-ols_yield_10cm <- lm(BuAc ~, data=norm_10cm)
+ols_yield_10cm <- lm(BuAc ~median+PlotCRR+crrsd+crrmean+moran+Trt+AUDPC+watersum, data=norm_10cm)
+ols_coll_diag(ols_yield_10cm)
 norm_10cm$ols_yi_res <- ols_yield_10cm$residuals
 summary(ols_yield_10cm)
 
 w <- knn2nb(knearneigh(coordinates(plots), k=8))
 moran.test(norm_10cm$ols_yi_res, nb2listw(w))
 
-sp_err_yi_10cm <- errorsarlm(BuAc ~ median+crrsd+Trt+rumple+geary, data = norm_10cm, listw = nb2listw(w), zero.policy = T)
+sp_err_yi_10cm <- errorsarlm(BuAc ~ median+moran+Trt, data = norm_10cm, listw = nb2listw(w), zero.policy = T)
 summary(sp_err_yi_10cm)
 norm_10cm$sp_err_resi <- sp_err_yi_10cm$residuals
 moran.test(norm_10cm$sp_err_resi, nb2listw(w))
@@ -506,3 +525,8 @@ write.csv(sar_results_1cm, "/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/Res
 write.csv(sar_results_5cm, "/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/Research/Canopy_Morphology/results/sar_results_5cm.csv")
 write.csv(sar_results_10cm, "/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/Research/Canopy_Morphology/results/sar_results_10cm.csv")
 write.csv(sar_results_20cm, "/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/Research/Canopy_Morphology/results/sar_results_20cm.csv")
+
+# ------------------------------------------------------------ Figures -------------------------------------------------------------------
+
+spplot(plots_10cm, zcol="BuAc")
+spplot(plots_10cm, zcol="AUDPC")
