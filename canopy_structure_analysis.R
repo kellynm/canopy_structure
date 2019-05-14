@@ -331,6 +331,7 @@ plot(plots_5cm$geary, plots_5cm$BuAc, xlab = "Geary's C", ylab = "Yield (bu/ac)"
 #plot(plots_5cm$watersum, plots_5cm$BuAc)
 #plot(plots_5cm$watersd, plots_5cm$BuAc)
 
+par(mfrow=c(1,1))
 
 # ggplot(data = plots_1cm, aes(x = carat, y = price)) + 
 #   geom_point(aes(color = clarity), alpha = 0.3, position = "jitter")+
@@ -385,15 +386,31 @@ norm_20cm$id <- plots_20cm$id
 
 # 1cm
 library(olsrr)
+library(MASS)
+library(leaps)
+#median+PlotCRR+crrmean+watersum
 ols_yield_1cm <- lm(BuAc ~  median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watersum+geary+iqr, data=norm_1cm)
 ols_coll_diag(ols_yield_1cm)
+step <- stepAIC(ols_yield_1cm, direction = "both")
+step$anova
+
+leaps<-regsubsets(BuAc ~  median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watersum+geary+iqr, data=norm_1cm,nbest=10)
+# view results 
+summary(leaps)
+# plot a table of models showing variables in each model.
+# models are ordered by the selection statistic.
+plot(leaps,scale="r2")
+# plot statistic by subset size 
+library(car)
+subsets(leaps, statistic="rsq")
+
 norm_1cm$ols_yi_res <- ols_yield_1cm$residuals
 summary(ols_yield_1cm)
 
 w <- knn2nb(knearneigh(coordinates(plots), k=8))
 moran.test(norm_1cm$ols_yi_res, nb2listw(w))
 
-sp_err_yi_1cm <- errorsarlm(BuAc ~ median+AUDPC+geary, data = norm_1cm, listw = nb2listw(w), zero.policy = T)
+sp_err_yi_1cm <- errorsarlm(BuAc ~ median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watersum+geary+iqr, data = norm_1cm, listw = nb2listw(w), zero.policy = T)
 summary(sp_err_yi_1cm)
 norm_1cm$sp_err_resi <- sp_err_yi_1cm$residuals
 moran.test(norm_1cm$sp_err_resi, nb2listw(w))
