@@ -15,8 +15,8 @@ library(viridis)
 
 
 #Load raster data for all dates
-#setwd("/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/LkWheeler_Sorghum/LkWheeler_Fusarium_Sorghum")
-setwd("Q:/My Drive/LkWheeler_Sorghum/LkWheeler_Fusarium_Sorghum")
+setwd("/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/LkWheeler_Sorghum/LkWheeler_Fusarium_Sorghum")
+#setwd("Q:/My Drive/LkWheeler_Sorghum/LkWheeler_Fusarium_Sorghum")
 
 sorghum_area <- readOGR("sorghum_area", "sorghum_area", stringsAsFactors = F)
 
@@ -270,7 +270,7 @@ plots_20cm <- merge(plots_20cm, rumple_df_list[[4]], by.x="id", by.y="plots")
 
 # ------------------------------------------------ spatial autocorrelation -----------------------------------------------------
 
-autocor_metrics <- function(x){
+autocor_metrics <- function(x, w){
   plotNums <- plots$id
   morans_all <- numeric(length(plotNums))
   geary_all <- numeric(length(plotNums))
@@ -280,9 +280,9 @@ autocor_metrics <- function(x){
     tmp <- plots@data
     position <- match(num, tmp$id)
     extract <- crop(x, plots[position,])
-    moran <- Moran(extract)
+    moran <- Moran(extract, w)
     morans_all[count] <- moran
-    geary <- Geary(extract)
+    geary <- Geary(extract, w)
     geary_all[count] <- geary
     count <- count+1
   }
@@ -293,11 +293,16 @@ autocor_metrics <- function(x){
   autocor_df
 }
 
-autocor_df_list <- lapply(csm_list, autocor_metrics)
-plots_1cm <- merge(plots_1cm, autocor_df_list[[1]], by.x="id", by.y="plots")
-plots_5cm <- merge(plots_5cm, autocor_df_list[[2]], by.x="id", by.y="plots")
-plots_10cm <- merge(plots_10cm, autocor_df_list[[3]], by.x="id", by.y="plots")
-plots_20cm <- merge(plots_20cm, autocor_df_list[[4]], by.x="id", by.y="plots")
+#Using approx 30 cm x 30 cm weights matrix
+autocor_1cm <- autocor_metrics(csm_1cm, matrix(c(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1), nc=25, nr=25))
+autocor_5cm <- autocor_metrics(csm_5cm, matrix(c(1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1), nc=5, nr=5))
+autocor_10cm <- autocor_metrics(csm_10cm, matrix(c(1,1,1,1,0,1,1,1,1), nc=3, nr=3))
+autocor_20cm <- autocor_metrics(csm_20cm, matrix(c(1,1,1,1,0,1,1,1,1), nc=3, nr=3))
+
+plots_1cm <- merge(plots_1cm, autocor_1cm, by.x="id", by.y="plots")
+plots_5cm <- merge(plots_5cm, autocor_5cm, by.x="id", by.y="plots")
+plots_10cm <- merge(plots_10cm, autocor_10cm, by.x="id", by.y="plots")
+plots_20cm <- merge(plots_20cm, autocor_20cm, by.x="id", by.y="plots")
 
 
 # ------------------------------------Plot variables ------------------------------------------
@@ -320,8 +325,8 @@ plot(plots_5cm$kurt, plots_5cm$BuAc, xlab = "Kurtosis", ylab = "Yield (bu/ac)", 
 plot(plots_5cm$crrmean, plots_5cm$BuAc, xlab = "Canopy Relief Ratio Mean", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
 plot(plots_5cm$crrsd, plots_5cm$BuAc, xlab = "Canopy Relief Ratio Standard Deviation", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
 #plot(plots_5cm$PlotCRR, plots_5cm$BuAc)
-#plot(plots_5cm$moran, plots_5cm$BuAc)
-plot(plots_5cm$geary, plots_5cm$BuAc, xlab = "Geary's C", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+plot(plots_5cm$moran, plots_5cm$BuAc)
+plot(plots_1cm$geary, plots_5cm$BuAc, xlab = "Geary's C", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
 #tmp <- lm(BuAc~median, data=plots_5cm)
 #summary(tmp)
 #plot(plots_5cm$sill, plots_5cm$BuAc)
@@ -389,12 +394,12 @@ library(olsrr)
 library(MASS)
 library(leaps)
 #median+PlotCRR+crrmean+watersum
-ols_yield_1cm <- lm(BuAc ~  median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watersum+geary+iqr, data=norm_1cm)
+ols_yield_1cm <- lm(BuAc ~  median+crrsd+crrmedian+skew+Trt+AUDPC+watersum+geary+iqr, data=norm_1cm)
 ols_coll_diag(ols_yield_1cm)
 step <- stepAIC(ols_yield_1cm, direction = "both")
 step$anova
 
-leaps<-regsubsets(BuAc ~  median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watersum+geary+iqr, data=norm_1cm,nbest=10)
+leaps<-regsubsets(BuAc ~  median+crrsd+crrmean+kurt+Trt+AUDPC+watersum+geary+iqr, data=norm_1cm,nbest=10)
 # view results 
 summary(leaps)
 # plot a table of models showing variables in each model.
@@ -410,7 +415,8 @@ summary(ols_yield_1cm)
 w <- knn2nb(knearneigh(coordinates(plots), k=8))
 moran.test(norm_1cm$ols_yi_res, nb2listw(w))
 
-sp_err_yi_1cm <- errorsarlm(BuAc ~ median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watersum+geary+iqr, data = norm_1cm, listw = nb2listw(w), zero.policy = T)
+# backwards stepwise - median+AUDPC+geary
+sp_err_yi_1cm <- errorsarlm(BuAc ~ median+crrsd+crrmedian+skew+Trt+AUDPC+watersum+geary+iqr, data = norm_1cm, listw = nb2listw(w), zero.policy = T)
 summary(sp_err_yi_1cm)
 norm_1cm$sp_err_resi <- sp_err_yi_1cm$residuals
 moran.test(norm_1cm$sp_err_resi, nb2listw(w))
@@ -439,7 +445,8 @@ summary(ols_yield_5cm)
 w <- knn2nb(knearneigh(coordinates(plots), k=8))
 moran.test(norm_5cm$ols_yi_res, nb2listw(w))
 
-sp_err_yi_5cm <- errorsarlm(BuAc ~median+Trt+geary, data = norm_5cm, listw = nb2listw(w), zero.policy = T)
+# backwards stepwise - median+Trt+geary
+sp_err_yi_5cm <- errorsarlm(BuAc ~median+crrsd+crrmedian+skew+Trt+AUDPC+watersum+geary+iqr, data = norm_5cm, listw = nb2listw(w), zero.policy = T)
 summary(sp_err_yi_5cm)
 norm_5cm$sp_err_resi <- sp_err_yi_5cm$residuals
 moran.test(norm_5cm$sp_err_resi, nb2listw(w))
@@ -468,7 +475,8 @@ summary(ols_yield_10cm)
 w <- knn2nb(knearneigh(coordinates(plots), k=8))
 moran.test(norm_10cm$ols_yi_res, nb2listw(w))
 
-sp_err_yi_10cm <- errorsarlm(BuAc ~ median+moran+Trt, data = norm_10cm, listw = nb2listw(w), zero.policy = T)
+# backwards stepwise - median+crrsd+Trt+iqr
+sp_err_yi_10cm <- errorsarlm(BuAc ~ median+crrsd+crrmedian+skew+Trt+AUDPC+watersum+geary+iqr, data = norm_10cm, listw = nb2listw(w), zero.policy = T)
 summary(sp_err_yi_10cm)
 norm_10cm$sp_err_resi <- sp_err_yi_10cm$residuals
 moran.test(norm_10cm$sp_err_resi, nb2listw(w))
@@ -496,7 +504,8 @@ summary(ols_yield_20cm)
 w <- knn2nb(knearneigh(coordinates(plots), k=8))
 moran.test(norm_20cm$ols_yi_res, nb2listw(w))
 
-sp_err_yi_20cm <- errorsarlm(BuAc ~ median+crrmean+Trt, data = norm_20cm, listw = nb2listw(w), zero.policy = T)
+# backwards stepwise - median+Trt
+sp_err_yi_20cm <- errorsarlm(BuAc ~ median+crrsd+crrmedian+skew+Trt+AUDPC+watersum+geary+iqr, data = norm_20cm, listw = nb2listw(w), zero.policy = T)
 summary(sp_err_yi_20cm)
 norm_20cm$sp_err_resi <- sp_err_yi_20cm$residuals
 moran.test(norm_20cm$sp_err_resi, nb2listw(w))
