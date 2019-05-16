@@ -365,7 +365,7 @@ histogram(plots_5cm$geary, nint=20)
 
 #----------------------------------------------- Statistical models ---------------------------------------------------------
 
-# All : mean+median+sd+skew+PlotCRR+crrsd+crrmean+kurt+moran+Trt+AUDPC+watersum+rumple+geary+iqr
+# All : mean+median+sd+skew+PlotCRR+crrsd+crrmean+crrmedian+kurt+moran+Trt+AUDPC+watersum+watermean+watersd+rumple+geary+iqr
 
 # Post colinearity 
 # 1cm: median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watersum+geary+iqr
@@ -416,7 +416,8 @@ w <- knn2nb(knearneigh(coordinates(plots), k=8))
 moran.test(norm_1cm$ols_yi_res, nb2listw(w))
 
 # backwards stepwise - median+AUDPC+geary
-sp_err_yi_1cm <- errorsarlm(BuAc ~ median+crrsd+crrmedian+skew+Trt+AUDPC+watersum+geary+iqr, data = norm_1cm, listw = nb2listw(w), zero.policy = T)
+sp_err_yi_1cm <- errorsarlm(BuAc ~ mean+median+sd+skew+PlotCRR+crrsd+crrmean+crrmedian+kurt+moran+Trt+AUDPC+watersum+watermean+watersd+rumple+geary+iqr, data = norm_1cm, listw = nb2listw(w), zero.policy = T)
+names(sp_err_yi_1cm)
 summary(sp_err_yi_1cm)
 norm_1cm$sp_err_resi <- sp_err_yi_1cm$residuals
 moran.test(norm_1cm$sp_err_resi, nb2listw(w))
