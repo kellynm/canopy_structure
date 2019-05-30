@@ -15,8 +15,8 @@ library(viridis)
 
 
 #Load raster data for all dates
-setwd("/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/LkWheeler_Sorghum/LkWheeler_Fusarium_Sorghum")
-#setwd("Q:/My Drive/LkWheeler_Sorghum/LkWheeler_Fusarium_Sorghum")
+#setwd("/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/LkWheeler_Sorghum/LkWheeler_Fusarium_Sorghum")
+setwd("Q:/My Drive/LkWheeler_Sorghum/LkWheeler_Fusarium_Sorghum")
 
 sorghum_area <- readOGR("sorghum_area", "sorghum_area", stringsAsFactors = F)
 
@@ -309,7 +309,7 @@ plots_20cm <- merge(plots_20cm, autocor_20cm, by.x="id", by.y="plots")
 
 imp_vars <- c("mean", "median", "skew", "iqr", "kurt", "sd", "crrsd", "crrmean", "moran", "Trt", "AUDPC", "watersum", "PlotCRR", "rumple") 
 
-pairs(BuAc~median+skew+crrsd+crrmean+kurt+Trt+AUDPC+rumple+geary+iqr,data=plots_5cm, lower.panel = NULL, 
+pairs(BuAc~mean+median+sd+skew+PlotCRR+crrsd+crrmean+crrmedian+kurt+moran+Trt+AUDPC+watersum+watermean+watersd+rumple+geary+iqr,data=plots_5cm, lower.panel = NULL, 
       main="Simple Scatterplot Matrix")
 
 par(mfrow=c(2,4), mar=c(5, 6, 2, 3))
@@ -364,13 +364,18 @@ histogram(plots_5cm$rumple, nint=20)
 histogram(plots_5cm$geary, nint=20)
 
 #----------------------------------------------- Statistical models ---------------------------------------------------------
+library(olsrr)
+library(spatialreg)
+library(MuMIn)
 
 # All : mean+median+sd+skew+PlotCRR+crrsd+crrmean+crrmedian+kurt+moran+Trt+AUDPC+watersum+watermean+watersd+rumple+geary+iqr
 
 # Post colinearity 
-# 1cm: median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watersum+geary+iqr
-# 5cm: median+PlotCRR+crrmean+Trt+AUDPC+watersum+geary+iqr
-# 10cm: median+PlotCRR+crrsd+crrmean+moran+Trt+AUDPC+watersum
+# 1cm: median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watermean+watersd+geary+iqr
+# 5cm: median+PlotCRR+crrmedian+kurt+Trt+AUDPC+watersum+watersd+geary+iqr
+# 10cm: median+PlotCRR+crrsd+crrmedian+kurt+Trt+AUDPC+watermean+watersd+geary
+# 20cm: median+PlotCRR+crrsd+crrmedian+kurt+Trt+AUDPC+watermean+watersd+geary
+# use: median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watermean+watersd+geary+iqr
 
 # normalize data
 norm_1cm <- as.data.frame(scale(plots_1cm@data[,c(10, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35)]))
@@ -389,141 +394,133 @@ norm_20cm <- as.data.frame(scale(plots_20cm@data[,c(10, 15, 16, 17, 18, 19, 20, 
 norm_20cm$Trt <- plots_20cm$Trt
 norm_20cm$id <- plots_20cm$id
 
-# 1cm
-library(olsrr)
-library(MASS)
-library(leaps)
-#median+PlotCRR+crrmean+watersum
-ols_yield_1cm <- lm(BuAc ~  median+crrsd+crrmedian+skew+Trt+AUDPC+watersum+geary+iqr, data=norm_1cm)
-ols_coll_diag(ols_yield_1cm)
-step <- stepAIC(ols_yield_1cm, direction = "both")
-step$anova
+# Function for calculating r^2 in SAR model, null model will be same for each resolution
 
-leaps<-regsubsets(BuAc ~  median+crrsd+crrmean+kurt+Trt+AUDPC+watersum+geary+iqr, data=norm_1cm,nbest=10)
-# view results 
-summary(leaps)
-# plot a table of models showing variables in each model.
-# models are ordered by the selection statistic.
-plot(leaps,scale="r2")
-# plot statistic by subset size 
-library(car)
-subsets(leaps, statistic="rsq")
+null <- spautolm(BuAc ~ 1, data = norm_1cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+  r.squaredLR(model, null = null)[1]
+}
 
-norm_1cm$ols_yi_res <- ols_yield_1cm$residuals
-summary(ols_yield_1cm)
+adj_r2 <- function(model){
+  r2 <- r.squaredLR(model, null = null)[1]
+  n <- model$fit[[5]]
+  p <- model$parameters
+  1-(1-r2)*((n - 1)/(n - p - 1))
+}
 
+# Weights matrix, same for each resolution
 w <- knn2nb(knearneigh(coordinates(plots), k=8))
-moran.test(norm_1cm$ols_yi_res, nb2listw(w))
+
+# ----------------------------------------------------------1cm-------------------------------------------------------------------
+
+#ols_yield_1cm <- lm(BuAc ~  median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watermean+watersd+geary+iqr, data=norm_1cm)
+#ols_coll_diag(ols_yield_1cm)
+#norm_1cm$ols_yi_res <- ols_yield_1cm$residuals
+#summary(ols_yield_1cm)
+#moran.test(norm_1cm$ols_yi_res, nb2listw(w))
+
+sar_1cm <- spautolm(BuAc ~ median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watermean+watersd+geary+iqr, data = norm_1cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+summary(sar_1cm)
+sar_resi <- sar_1cm$fit[[9]]
+norm_1cm$sar_resi <- sar_resi
+moran.test(norm_1cm$sar_resi, nb2listw(w))
+
+modsel_1cm <- dredge(sar_1cm, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+topmod_1cm <- spautolm(BuAc ~ geary + median + AUDPC, data = norm_1cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2_1cm <- r2(topmod_1cm)
+adj_r2_1cm <- adj_r2(topmod_1cm)
+
+tmp_modsel_1cm <- modsel_1cm
 
 # backwards stepwise - median+AUDPC+geary
-sp_err_yi_1cm <- errorsarlm(BuAc ~ mean+median+sd+skew+PlotCRR+crrsd+crrmean+crrmedian+kurt+moran+Trt+AUDPC+watersum+watermean+watersd+rumple+geary+iqr, data = norm_1cm, listw = nb2listw(w), zero.policy = T)
-names(sp_err_yi_1cm)
-summary(sp_err_yi_1cm)
-norm_1cm$sp_err_resi <- sp_err_yi_1cm$residuals
-moran.test(norm_1cm$sp_err_resi, nb2listw(w))
+# sp_err_yi_1cm <- errorsarlm(BuAc ~ median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watersum+geary+iqr, data = norm_1cm, listw = nb2listw(w), zero.policy = T)
+# names(sp_err_yi_1cm)
+#summary(sp_err_yi_1cm)
+#norm_1cm$sp_err_resi <- sp_err_yi_1cm$residuals
+#moran.test(norm_1cm$sp_err_resi, nb2listw(w))
 
-# Try RF regression to see if model can be improved
+# -----------------------------------------5cm-----------------------------------------------------------------
 
-norm_1cm_df <- as.data.frame(norm_1cm)
+#ols_yield_5cm <- lm(BuAc ~ median+PlotCRR+crrmedian+kurt+Trt+AUDPC+watersum+watersd+geary+iqr, data=norm_5cm)
+#ols_coll_diag(ols_yield_5cm)
+#norm_5cm$ols_yi_res <- ols_yield_5cm$residuals
+#summary(ols_yield_5cm)
+#moran.test(norm_5cm$ols_yi_res, nb2listw(w))
 
-set.seed(42)
-train_data_indices <- rep(FALSE, nrow(norm_1cm_df))
-train_data_indices[sample(1:nrow(norm_1cm_df), round(0.8 * nrow(norm_1cm_df)))] <- TRUE # randomly select 80% of the data for training
-rf_regression_1cm<- randomForest(BuAc ~ median+skew+PlotCRR+crrsd+crrmean+moran+Trt+AUDPC+watersum+rumple, data=norm_1cm_df[train_data_indices, ], importance=T)
-rf_regression_1cm
-varImpPlot(rf_regression_1cm)
-pred_yield <- predict(rf_regression_1cm, norm_1cm_df[!train_data_indices,]) # predict the rings
-plot(norm_1cm_df$BuAc[!train_data_indices], pred_yield, xlab="Observed", ylab="Predicted")
-abline(a=0, b=1, lty=2, col=2)
+sar_5cm <- spautolm(BuAc ~ median+PlotCRR+crrmedian+kurt+Trt+AUDPC+watersum+watersd+geary+iqr, data = norm_5cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+summary(sar_5cm)
+sar_resi <- sar_5cm$fit[[9]]
+norm_5cm$sar_resi <- sar_resi
+moran.test(norm_5cm$sar_resi, nb2listw(w))
 
-# 5cm
+modsel_5cm <- dredge(sar_5cm, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+topmod_5cm <- spautolm(BuAc ~ geary + median + Trt, data = norm_5cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2_5cm <- r2(topmod_5cm)
+adj_r2_5cm <- adj_r2(topmod_5cm)
 
-ols_yield_5cm <- lm(BuAc ~ median+skew+crrsd+crrmean+Trt+AUDPC+watersum+geary+rumple, data=norm_5cm)
-ols_coll_diag(ols_yield_5cm)
-norm_5cm$ols_yi_res <- ols_yield_5cm$residuals
-summary(ols_yield_5cm)
-
-w <- knn2nb(knearneigh(coordinates(plots), k=8))
-moran.test(norm_5cm$ols_yi_res, nb2listw(w))
+# model selection results when using same dependent variables as 1cm models, ignoring collinearity analysis results
+tmp_modsel_5cm <- modsel_5cm
 
 # backwards stepwise - median+Trt+geary
-sp_err_yi_5cm <- errorsarlm(BuAc ~median+crrsd+crrmedian+skew+Trt+AUDPC+watersum+geary+iqr, data = norm_5cm, listw = nb2listw(w), zero.policy = T)
-summary(sp_err_yi_5cm)
-norm_5cm$sp_err_resi <- sp_err_yi_5cm$residuals
-moran.test(norm_5cm$sp_err_resi, nb2listw(w))
+# sp_err_yi_5cm <- errorsarlm(BuAc ~median+crrsd+crrmedian+skew+Trt+AUDPC+watersum+geary+iqr, data = norm_5cm, listw = nb2listw(w), zero.policy = T)
+# summary(sp_err_yi_5cm)
+#norm_5cm$sp_err_resi <- sp_err_yi_5cm$residuals
+#moran.test(norm_5cm$sp_err_resi, nb2listw(w))
 
-# Try RF regression to see if model can be improved
+# -----------------------------------------------------------10cm-------------------------------------------------------------------
 
-norm_5cm_df <- as.data.frame(norm_5cm)
+#ols_yield_10cm <- lm(BuAc ~median+PlotCRR+crrsd+crrmedian+kurt+Trt+AUDPC+watermean+watersd+geary, data=norm_10cm)
+#ols_coll_diag(ols_yield_10cm)
+#norm_10cm$ols_yi_res <- ols_yield_10cm$residuals
+#summary(ols_yield_10cm)
+#moran.test(norm_10cm$ols_yi_res, nb2listw(w))
 
-set.seed(42)
-train_data_indices <- rep(FALSE, nrow(norm_5cm_df))
-train_data_indices[sample(1:nrow(norm_5cm_df), round(0.8 * nrow(norm_5cm_df)))] <- TRUE # randomly select 80% of the data for training
-rf_regression_5cm<- randomForest(BuAc ~ mean+sd+PlotCRR+crrmean+kurt+Trt+watersum, data=norm_5cm_df[train_data_indices, ], importance=T)
-rf_regression_5cm
-varImpPlot(rf_regression_5cm)
-pred_yield <- predict(rf_regression_5cm, norm_5cm_df[!train_data_indices,]) # predict the rings
-plot(norm_5cm_df$BuAc[!train_data_indices], pred_yield, xlab="Observed", ylab="Predicted")
-abline(a=0, b=1, lty=2, col=2)
+sar_10cm <- spautolm(BuAc ~ median+PlotCRR+crrsd+crrmedian+kurt+Trt+AUDPC+watermean+watersd+geary, data = norm_10cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+summary(sar_10cm)
+sar_resi <- sar_10cm$fit[[9]]
+norm_10cm$sar_resi <- sar_resi
+moran.test(norm_10cm$sar_resi, nb2listw(w))
 
-# 10cm
+modsel_10cm <- dredge(sar_10cm, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+topmod_10cm <- spautolm(BuAc ~ geary + median + Trt, data = norm_10cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2_10cm <- r2(topmod_10cm)
+adj_r2_10cm <- adj_r2(topmod_10cm)
 
-ols_yield_10cm <- lm(BuAc ~median+PlotCRR+crrsd+crrmean+moran+Trt+AUDPC+watersum, data=norm_10cm)
-ols_coll_diag(ols_yield_10cm)
-norm_10cm$ols_yi_res <- ols_yield_10cm$residuals
-summary(ols_yield_10cm)
+# model selection results when using same dependent variables as 1cm models, ignoring collinearity analysis results
+tmp_modsel_10cm <- modsel_10cm
 
-w <- knn2nb(knearneigh(coordinates(plots), k=8))
-moran.test(norm_10cm$ols_yi_res, nb2listw(w))
 
 # backwards stepwise - median+crrsd+Trt+iqr
-sp_err_yi_10cm <- errorsarlm(BuAc ~ median+crrsd+crrmedian+skew+Trt+AUDPC+watersum+geary+iqr, data = norm_10cm, listw = nb2listw(w), zero.policy = T)
-summary(sp_err_yi_10cm)
-norm_10cm$sp_err_resi <- sp_err_yi_10cm$residuals
-moran.test(norm_10cm$sp_err_resi, nb2listw(w))
+# sp_err_yi_10cm <- errorsarlm(BuAc ~ median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watermean+watersd+geary+iqr, data = norm_10cm, listw = nb2listw(w), zero.policy = T)
+# summary(sp_err_yi_10cm)
+#norm_10cm$sp_err_resi <- sp_err_yi_10cm$residuals
+#moran.test(norm_10cm$sp_err_resi, nb2listw(w))
 
-# Try RF regression to see if model can be improved
+# ----------------------------------------------20cm-------------------------------------------------------------------
 
-norm_10cm_df <- as.data.frame(norm_10cm)
+# ols_yield_20cm <- lm(BuAc ~ median+PlotCRR+crrsd+crrmedian+kurt+Trt+AUDPC+watermean+watersd+geary, data=norm_20cm)
+# ols_coll_diag(ols_yield_20cm)
+# norm_20cm$ols_yi_res <- ols_yield_20cm$residuals
+# summary(ols_yield_20cm)
+# moran.test(norm_20cm$ols_yi_res, nb2listw(w))
 
-set.seed(42)
-train_data_indices <- rep(FALSE, nrow(norm_10cm_df))
-train_data_indices[sample(1:nrow(norm_10cm_df), round(0.8 * nrow(norm_10cm_df)))] <- TRUE # randomly select 80% of the data for training
-rf_regression_10cm<- randomForest(BuAc ~ mean+sd+PlotCRR+crrmean+kurt+Trt+watersum, data=norm_10cm_df[train_data_indices, ], importance=T)
-rf_regression_10cm
-varImpPlot(rf_regression_10cm)
-pred_yield <- predict(rf_regression_10cm, norm_10cm_df[!train_data_indices,]) # predict the rings
-plot(norm_10cm_df$BuAc[!train_data_indices], pred_yield, xlab="Observed", ylab="Predicted")
-abline(a=0, b=1, lty=2, col=2)
+sar_20cm <- spautolm(BuAc ~ median+PlotCRR+crrsd+crrmedian+kurt+Trt+AUDPC+watermean+watersd+geary, data = norm_20cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+summary(sar_20cm)
+sar_resi <- sar_20cm$fit[[9]]
+norm_20cm$sar_resi <- sar_resi
+moran.test(norm_20cm$sar_resi, nb2listw(w))
 
-# 20cm
-
-ols_yield_20cm <- lm(BuAc ~ mean+sd+skew+PlotCRR+crrsd+crrmean+kurt+moran+Trt+AUDPC+watersum, data=norm_20cm)
-norm_20cm$ols_yi_res <- ols_yield_20cm$residuals
-summary(ols_yield_20cm)
-
-w <- knn2nb(knearneigh(coordinates(plots), k=8))
-moran.test(norm_20cm$ols_yi_res, nb2listw(w))
+modsel_20cm <- dredge(sar_20cm, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+topmod_20cm <- spautolm(BuAc ~ crrmedian + median + Trt, data = norm_20cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2_20cm <- r2(topmod_20cm)
+adj_r2_20cm <- adj_r2(topmod_20cm)
 
 # backwards stepwise - median+Trt
-sp_err_yi_20cm <- errorsarlm(BuAc ~ median+crrsd+crrmedian+skew+Trt+AUDPC+watersum+geary+iqr, data = norm_20cm, listw = nb2listw(w), zero.policy = T)
-summary(sp_err_yi_20cm)
-norm_20cm$sp_err_resi <- sp_err_yi_20cm$residuals
-moran.test(norm_20cm$sp_err_resi, nb2listw(w))
+# sp_err_yi_20cm <- errorsarlm(BuAc ~ median+crrsd+crrmedian+skew+Trt+AUDPC+watersum+geary+iqr, data = norm_20cm, listw = nb2listw(w), zero.policy = T)
+# summary(sp_err_yi_20cm)
+# norm_20cm$sp_err_resi <- sp_err_yi_20cm$residuals
+# moran.test(norm_20cm$sp_err_resi, nb2listw(w))
 
-# Try RF regression to see if model can be improved
-
-norm_20cm_df <- as.data.frame(norm_20cm)
-
-set.seed(42)
-train_data_indices <- rep(FALSE, nrow(norm_20cm_df))
-train_data_indices[sample(1:nrow(norm_20cm_df), round(0.8 * nrow(norm_20cm_df)))] <- TRUE # randomly select 80% of the data for training
-rf_regression_20cm<- randomForest(BuAc ~ mean+sd+PlotCRR+crrmean+kurt+Trt+watersum, data=norm_20cm_df[train_data_indices, ], importance=T)
-rf_regression_20cm
-varImpPlot(rf_regression_20cm)
-pred_yield <- predict(rf_regression_20cm, norm_20cm_df[!train_data_indices,]) # predict the rings
-plot(norm_20cm_df$BuAc[!train_data_indices], pred_yield, xlab="Observed", ylab="Predicted")
-abline(a=0, b=1, lty=2, col=2)
 
 # ------------------------------------- Table of regression results --------------------------------------------------------
 
