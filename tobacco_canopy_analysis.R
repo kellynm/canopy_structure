@@ -111,6 +111,13 @@ plots_814 <- merge(plots_814, ch_df_list[[3]], by.x="Id", by.y="plots")
 #--------------------------------------------------------- rumple index -----------------------------------------------------------------
 library(lidR)
 
+extract <- mask(csm_618, plots[position,])
+extract_df <- rasterToPoints(extract)
+rumple <- rumple_index(extract_df[,1], extract_df[,2], extract_df[,3])
+
+tmp <- plots@data
+position <- match("606-E", tmp$Id)
+
 rumple <- function(x){
   plotNums <- plots$Id
   rumple_all <- numeric(length(plotNums))
@@ -119,14 +126,17 @@ rumple <- function(x){
   for (num in plotNums){
     tmp <- plots@data
     position <- match(num, tmp$Id)
-    extract <- crop(x, plots[position,])
-    rumple <- rumple_index(extract)
+    extract <- mask(x, plots[position,])
+    extract_df <- rasterToPoints(extract)
+    rumple <- rumple_index(extract_df[,1], extract_df[,2], extract_df[,3])
     rumple_all[count] <- rumple
     count <- count+1
   }
   rumple_df <- data.frame(plots=plots$Id, rumple= rumple_all)
   rumple_df
 }
+
+min(plot_extract_618$`501-E`)
 
 csm_list <- list(csm_618, csm_716, csm_814)
 rumple_df_list <- lapply(csm_list, rumple)
@@ -170,15 +180,159 @@ plots_618 <- merge(plots_618, autocor_618, by.x="Id", by.y="plots")
 plots_716 <- merge(plots_716, autocor_716, by.x="Id", by.y="plots")
 plots_814 <- merge(plots_814, autocor_814, by.x="Id", by.y="plots")
 
+# Aggregate treatments
 
-# ------------------------------------- Random Forest Classification ------------------------------------------------------------
+library(data.table)
+
+deficiency <- c("-K", "-N", "-P")
+toxicity <- c("+B 2 lb", "+B 4 lb", "+B 8 lb")
+
+dt_618 <- as.data.table(plots_618)
+dt_618$Trt_agg <- as.character(plots_618$Treatment)
+dt_618[Treatment %in% deficiency]$Trt_agg <- "deficiency"
+dt_618[Treatment %in% toxicity]$Trt_agg <- "toxicity"
+dt_618$Trt_agg <- as.factor(dt_618$Trt_agg)
+plots_618@data <- dt_618
+
+dt_716 <- as.data.table(plots_716)
+dt_716$Trt_agg <- as.character(plots_716$Treatment)
+dt_716[Treatment %in% deficiency]$Trt_agg <- "deficiency"
+dt_716[Treatment %in% toxicity]$Trt_agg <- "toxicity"
+dt_716$Trt_agg <- as.factor(dt_716$Trt_agg)
+plots_716@data <- dt_716
+
+dt_814 <- as.data.table(plots_814)
+dt_814$Trt_agg <- as.character(plots_814$Treatment)
+dt_814[Treatment %in% deficiency]$Trt_agg <- "deficiency"
+dt_814[Treatment %in% toxicity]$Trt_agg <- "toxicity"
+dt_814$Trt_agg <- as.factor(dt_814$Trt_agg)
+plots_814@data <- dt_814
+
+# --------------------------------------- Regression --------------------------------------------------------------------------------
+
+library(PerformanceAnalytics)
 
 plots_618_df <- as.data.frame(plots_618)
+plots_716_df <- as.data.frame(plots_716)
+plots_814_df <- as.data.frame(plots_814)
 
+chart.Correlation(plots_618_df[3:18], 
+                  method="spearman",
+                  histogram=TRUE,
+                  pch=16)
+
+# normalize data
+norm_618 <- as.data.frame(scale(plots_618_df[,3:18]))
+norm_618$Treatment <- plots_618_df$Treatment
+norm_618$Id <- plots_618_df$Id
+norm_618$Trt_agg <- plots_618_df$Trt_agg
+
+norm_716 <- as.data.frame(scale(plots_716_df[,3:18]))
+norm_716$Treatment <- plots_716_df$Treatment
+norm_716$Id <- plots_716_df$Id
+norm_716$Trt_agg <- plots_716_df$Trt_agg
+
+norm_814 <- as.data.frame(scale(plots_814_df[,3:18]))
+norm_814$Treatment <- plots_814_df$Treatment
+norm_814$Id <- plots_814_df$Id
+norm_814$Trt_agg <- plots_814_df$Trt_agg
+
+# all variables - crrmedian+crrmean+crrsd+median+mean+sd+iqr+var+sum+skew+kurt+PlotCRR+chRange+rumple+moran+geary
+# 618 variables (post collinearity analysis) - 
+#     all trt classes: crrmedian+crrsd+mean+sd+kurt+geary
+#     agg trt classes: crrmedian+crrsd+skew+kurt+rumple+moran
+# 716 variables (post collinearity analysis) - 
+#     all trt classes: crrmean+crrsd+median+kurt+rumple+geary
+#     agg trt classes: 
+# 814 variables (post collinearity analysis) - 
+#     all trt classes: crrmean+crrsd+median+iqr+kurt+geary
+#     agg trt classes:
+
+library(car)
+glm_618 <- glm(Treatment ~ crrmedian+crrsd+median+kurt+rumple+geary, data = norm_618, 
+              family = binomial(link="logit"), na.action = na.fail)
+vif(glm_618)
+
+glm_716 <- glm(Treatment ~ crrmean+crrsd+median+kurt+rumple+moran, data = norm_716, 
+               family = binomial(link="logit"), na.action = na.fail)
+vif(glm_716)
+
+glm_814 <- glm(Treatment ~ crrmedian+median+iqr+kurt+PlotCRR+geary, data = norm_814, 
+               family = binomial(link="logit"), na.action = na.fail)
+vif(glm_814)
+
+# Weights matrix
+w <- knn2nb(knearneigh(coordinates(plots), k=8))
+
+library(MuMIn)
+
+train_data_indices <- rep(FALSE, nrow(norm_618))
+train_data_indices[sample(1:nrow(norm_618), round(0.8 * nrow(norm_618)))] <- TRUE # randomly select 80% of the data for training
+
+train_618 <- norm_618[train_data_indices, ]
+
+glm_618 = glm(Treatment ~ crrmedian+crrsd+mean+sd+kurt+geary,
+              data=train_618,
+              family = binomial(link="logit"), na.action = na.fail
+)
+
+modsel_618 <- dredge(glm_618, beta = "none", trace = T)
+
+glm_best_618 = glm(Treatment ~ crrsd,
+                   data=norm_618,
+                   family = binomial(link="logit"), na.action = na.fail
+)
+
+glm_best_618_agg = glm(Trt_agg ~ crrmedian+sd+sum+skew+kurt+moran,
+                   data=norm_618,
+                   family = binomial(link="logit"), na.action = na.fail
+)
+
+summary.glm(glm_best_618)
+summary.glm(glm_best_618_agg)
+# norm_618$resi <- glm_best_618$residuals
+# moran.test(norm_618$resi, nb2listw(w))
+# 
+# durbinWatsonTest(glm_best_618)
+# 
+# library(ROCR)
+# pred_data_618 <- norm_618[!train_data_indices, ]
+# pred_618 = predict(glm_best_618,newdata=pred_data_618,type="response")
+# fitpred = prediction(fitpreds,data$val$income)
+# fitperf = performance(fitpred,"tpr","fpr")
+# plot(fitperf,col="green",lwd=2,main="ROC Curve for Logistic:  Adult")
+# abline(a=0,b=1,lwd=2,lty=2,col="gray")
+
+modsel_716 <- dredge(glm_716, beta = "none", trace = T)
+
+glm_best_716 = glm(Treatment ~ crrsd+median,
+                   data=norm_716,
+                   family = binomial(link="logit"), na.action = na.fail
+)
+
+summary.glm(glm_best_716)
+
+glm_814 = glm(Treatment ~ crrmedian+median+iqr+kurt+PlotCRR+geary,
+              data=norm_814,
+              family = binomial(link="logit"), na.action = na.fail
+)
+
+modsel_814 <- dredge(glm_814, beta = "none", trace = T)
+modsel_814
+
+glm_best_814 = glm(Treatment ~ geary+iqr+kurt,
+                   data=norm_814,
+                   family = binomial(link="logit"), na.action = na.fail
+)
+
+summary.glm(glm_best_814)
+
+# ------------------------------------- Random Forest Classification ------------------------------------------------------------
+library(randomForest)
 set.seed(42)
 train_data_indices <- rep(FALSE, nrow(plots_618_df))
 train_data_indices[sample(1:nrow(plots_618_df), round(0.8 * nrow(plots_618_df)))] <- TRUE # randomly select 80% of the data for training
-rf_regression_618<- randomForest(Treatment ~ median+crrmean+crrsd+iqr+skew+kurt+PlotCRR+geary, data=plots_618_df[train_data_indices, ], importance=T)
+rf_regression_618<- randomForest(Trt_agg ~ crrmedian+crrsd+skew+kurt+rumple+moran, data=plots_618_df[train_data_indices, ], importance=T)
 rf_regression_618
 varImpPlot(rf_regression_618)
 pred_trt <- predict(rf_regression_618, plots_618_df[!train_data_indices,]) # predict the rings
