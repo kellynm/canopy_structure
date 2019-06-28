@@ -30,6 +30,7 @@ library(ggpubr)
 library(olsrr)
 library(spatialreg)
 library(MuMIn)
+library(MASS)
 
 #Load raster data for all dates
 #setwd("/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/LkWheeler_Sorghum/LkWheeler_Fusarium_Sorghum")
@@ -111,6 +112,7 @@ crr <- function(x){
   (mean(x, na.rm=T)-min(x, na.rm=T))/(max(x, na.rm=T)-min(x, na.rm=T))
 }
 
+# calculate CRR for approx 0.5m moving window
 crrRast_1cm <- focal(csm_1cm, w=matrix(1/2401, nc=49, nr=49), crr)
 crrRast_5cm <- focal(csm_5cm, w=matrix(1/81, nc=9, nr=9), crr)
 crrRast_10cm <- focal(csm_10cm, w=matrix(1/25, nc=5, nr=5), crr)
@@ -153,6 +155,7 @@ plots_20cm <- merge(plots_20cm, crr_df_list[[4]], by.x="id", by.y="plots")
 
 ```
 # CRR is not normally distributed. Use median and iqr to describe crr within each plot.
+CRR is also multimodal.
 
 
 ##Crop height metrics
@@ -306,6 +309,10 @@ plots_20cm <- merge(plots_20cm, rumple_df_list[[4]], by.x="id", by.y="plots")
 
 ```{r sp-autocor}
 
+library(ape)
+
+library(ncf)
+
 autocor_metrics <- function(x, w){
   plotNums <- plots$id
   morans_all <- numeric(length(plotNums))
@@ -316,9 +323,9 @@ autocor_metrics <- function(x, w){
     tmp <- plots@data
     position <- match(num, tmp$id)
     extract <- crop(x, plots[position,])
-    moran <- Moran(extract, w)
+    moran <- Moran(extract)
     morans_all[count] <- moran
-    geary <- Geary(extract, w)
+    geary <- Geary(extract)
     geary_all[count] <- geary
     count <- count+1
   }
@@ -339,6 +346,51 @@ plots_1cm <- merge(plots_1cm, autocor_1cm, by.x="id", by.y="plots")
 plots_5cm <- merge(plots_5cm, autocor_5cm, by.x="id", by.y="plots")
 plots_10cm <- merge(plots_10cm, autocor_10cm, by.x="id", by.y="plots")
 plots_20cm <- merge(plots_20cm, autocor_20cm, by.x="id", by.y="plots")
+
+
+
+# Try Moran.I from ape package
+# ncf_cor_5cm_302 <-correlog(samp@coords[,1], samp@coords[,2], samp$csm_adj_9_1_noDepth_5cm, increment = 0.3)
+# 
+# w <- pointDistance(samp)
+# diag(w) <- 0
+# 
+# tmp <- plots@data
+# position <- match('302', tmp$id)
+# extract <- crop(csm_5cm, plots[position,])
+# samp <- sampleRandom(extract, 500, sp=T)
+# samp_df <- as.data.frame(samp@data)
+# moran <- Moran.I(samp[[1]], w)
+# 
+# autocor_metrics_ape <- function(x){
+#   plotNums <- plots$id
+#   morans_all <- numeric(length(plotNums))
+#   #geary_all <- numeric(length(plotNums))
+#   count <- 1
+#   
+#   for (num in plotNums){
+#     tmp <- plots@data
+#     position <- match(num, tmp$id)
+#     extract <- crop(x, plots[position,])
+#     samp <- sampleRandom(extract, 500, sp=T)
+#     w <- pointDistance(samp)
+#     diag(w) <- 0
+#     samp_df <- as.data.frame(samp@data)
+#     moran <- Moran.I(samp[[1]], w)
+#     morans_all[count] <- moran[[1]]
+#     #geary <- Geary(extract)
+#     #geary_all[count] <- geary
+#     count <- count+1
+#   }
+#   
+#   names(morans_all) <- plots$id
+#   #names(geary_all) <- plots$id
+#   autocor_df <- data.frame(plots=plots$id, moran_ape= morans_all)
+#   autocor_df
+# }
+# 
+# autocor_1cm_ape <- autocor_metrics_ape(csm_1cm)
+# plots_1cm <- merge(plots_1cm, autocor_1cm_ape, by.x="id", by.y="plots")
 
 ```
 
@@ -362,6 +414,8 @@ shapiro.test(plots_1cm$wateriqr)
 shapiro.test(plots_1cm$PlotCRR)
 shapiro.test(plots_1cm$rumple)
 shapiro.test(plots_1cm$dip)
+shapiro.test(plots_1cm$moran_ape)
+shapiro.test(plots_1cm$dip)
 
 shapiro.test(crrRast_1cm@data)
 
@@ -375,6 +429,8 @@ plots_1cm$watermedian_ln <- transformTukey(plots_1cm$watermedian)
 plots_1cm$wateriqr_ln <- transformTukey(plots_1cm$wateriqr)
 plots_1cm$PlotCRR_ln <- transformTukey(plots_1cm$PlotCRR)
 plots_1cm$rumple_ln <- transformTukey(plots_1cm$rumple)
+#plots_1cm$moran_ape_ln <- transformTukey(plots_1cm$moran_ape)
+plots_1cm$dip_ln <- transformTukey(plots_1cm$dip)
 
 plots_5cm$BuAc_ln <- transformTukey(plots_5cm$BuAc)
 plots_5cm$iqr_ln <- transformTukey(plots_5cm$iqr)
@@ -485,7 +541,7 @@ ggscatter(plots_1cm@data, x = "PlotCRR_ln", y = "BuAc_ln",
           cor.coef = TRUE, cor.method = "spearman",
           xlab = "log(Plot CRR)", ylab = "log(Yield) (bu/ac)")
 
-cor.test(plots_5cm$geary, plots_5cm$BuAc_ln, method = "spearman")
+cor.test(plots_1cm$geary, plots_5cm$BuAc_ln, method = "spearman")
 ggscatter(plots_1cm@data, x = "geary", y = "BuAc_ln", 
           add = "reg.line", conf.int = TRUE, 
           cor.coef = TRUE, cor.method = "spearman",
@@ -555,6 +611,9 @@ norm_20cm <- as.data.frame(scale(plots_20cm@data[,c(21, 23, 26, 29, 30,34, 35, 3
 norm_20cm$Trt <- plots_20cm$Trt
 norm_20cm$id <- plots_20cm$id
 
+# Weights matrix, same for each resolution
+w <- knn2nb(knearneigh(coordinates(plots), k=8))
+
 # Function for calculating r^2 in SAR model, null model will be same for each resolution
 
 null <- spautolm(BuAc_ln ~ 1, data = norm_1cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
@@ -570,9 +629,6 @@ adj_r2 <- function(model){
   1-(1-r2)*((n - 1)/(n - p - 1))
 }
 
-# Weights matrix, same for each resolution
-w <- knn2nb(knearneigh(coordinates(plots), k=8))
-
 ```
 
 ### All : median+skew+PlotCRR_ln+crrmedian_ln+crriqr+kurt+Trt+AUDPC_ln+watersum_ln+watermedian_ln+wateriqr_ln+rumple_ln+geary+iqr_ln
@@ -583,6 +639,10 @@ Post colinearity
 10cm: median+skew+PlotCRR_ln+crrmedian_ln+crriqr+Trt+AUDPC_ln+watermedian_ln+wateriqr_ln+geary+iqr_ln
 20cm: median+PlotCRR_ln+crrmedian_ln+crriqr+Trt+AUDPC_ln+watermedian_ln+wateriqr_ln+rumple_ln+geary
 use: median+PlotCRR_ln+crrmean+
+
+Dip test pvalue was used in 2nd best model for 1cm, but was not significant. Omitting it dropped r2 from 0.4858 to 0.46.
+
+Moran's I using ape package was not used in top models. Using 30cmx30cm neighborhood imporved relationship between moran/geary and yield slightly. Still not certain I'm using the neighborhood correctly though. Decided to continue using raster package autocor with 30x30 matrix.
 
 
 ```{r stats-1cm}
@@ -597,7 +657,7 @@ norm_1cm$ols_res <- ols_yield_1cm$residuals
 #summary(ols_yield_1cm)
 moran.test(norm_1cm$ols_res, nb2listw(w))
 
-sar_1cm <- spautolm(BuAc_ln ~ median+skew+PlotCRR_ln+crrmedian_ln+crriqr+Trt+AUDPC_ln+watermedian_ln+wateriqr_ln+geary+iqr_ln, data = norm_1cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+sar_1cm <- spautolm(BuAc_ln ~ median+skew+PlotCRR_ln+crrmedian_ln+crriqr+Trt+AUDPC_ln+watermedian_ln+wateriqr_ln+geary+iqr_ln+dip_ln, data = norm_1cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
 summary(sar_1cm)
 sar_resi <- sar_1cm$fit[[9]]
 norm_1cm$sar_resi <- sar_resi

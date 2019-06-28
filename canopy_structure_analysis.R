@@ -245,9 +245,10 @@ samp_df <- as.data.frame(samp)
 samp_df$trans <- transformTukey(samp_df$csm_adj_9_1_noDepth_1cm)
 samp@data <- samp_df
 
-variogram <- variogram(samp$trans~1, locations=samp, cutoff = 3, width = 0.1)
+variogram <- variogram(samp$trans~1, locations=samp, cutoff = 3, width = 0.1, cloud=T)
 plot(variogram)
 fit_vgm <- fit.variogram(variogram, vgm(c("Exp", "Sph", "Mat", "Gau")))
+plot(fit_vgm)
 range <- round(fit_vgm$range[2], 4)
 sill <- round(fit_vgm$psill[2], 4)
 range_all[count] <- range

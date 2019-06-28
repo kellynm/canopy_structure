@@ -12,7 +12,8 @@ library(gstat)
 library(usdm)
 library(viridis)
 library(randomForest)
-
+library(diptest)
+library(ggpubr)
 
 #Load raster data for all dates
 #setwd("/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/LkWheeler_Sorghum/LkWheeler_Fusarium_Sorghum")
@@ -53,14 +54,26 @@ crrRast_716 <- focal(csm_716, w=matrix(1/81, nc=9, nr=9), crr)
 crrRast_814 <- focal(csm_814, w=matrix(1/81, nc=9, nr=9), crr)
 crrRast_list <- list(crrRast_618,crrRast_716,crrRast_814)
 
+# Check if crr within plot is normally distributed
+crr_618_df <- as.data.frame(crrRast_618)
+shapiro.test(sample(crr_618_df$layer, 5000))
+histogram(crr_618_df$layer)
+velox_crr_618 <- velox(crrRast_618)
+crr_extract_618 <- velox_crr_618$extract(sp=plots)
+names(crr_extract_618) <- plots$Id
+
+histogram(crr_extract_618$`502-E`)
+shapiro.test(sample(crr_extract_618$`502-E`, 5000))
+ggqqplot(sample(crr_extract_618$`502-E`, 5000))
+
 crr_metrics <- function(x){
   veloxRast <- velox(x)
   extract <- veloxRast$extract(sp=plots)
   names(extract) <- plots$Id
   crrmean <- sapply(extract, mean, na.rm=T)
   crrmedian <- sapply(extract, median, na.rm=T)
-  crrsd <- sapply(extract, sd, na.rm=T)
-  crrDF <- data.frame(plots=plots$Id, crrmedian= crrmedian, crrmean=crrmean, crrsd = crrsd)
+  crriqr <- sapply(extract, IQR, na.rm=T)
+  crrDF <- data.frame(plots=plots$Id, crrmedian= crrmedian, crrmean=crrmean, crriqr = crriqr)
   crrDF
   # Normalize data
   # norm_crr <- as.data.frame(scale(crrDF[,2:4]))
@@ -84,6 +97,36 @@ names(plot_extract_716) <- plots$Id
 names(plot_extract_814) <- plots$Id
 
 extract_list <- list(plot_extract_618, plot_extract_716, plot_extract_814)
+
+# Check for multimodality
+dip.test(plot_extract_618$`502-E`)
+histogram(plot_extract_618$`502-E`)
+
+multimodality_test <- function(x){
+  plotNums <- plots$Id
+  dip_all <- numeric(length(plotNums))
+  names(dip_all) <- "dip"
+  count <- 1
+  for (plot in x){
+    test <- dip.test(plot)
+    p <- test$p.value
+    dip_all[count] <- p
+    count <- count+1
+  }
+  dip_df <- data.frame(plots=plots$Id, dip= dip_all)
+  dip_df
+}
+
+dip_df_list <- lapply(extract_list, multimodality_test)
+
+#merge all metrics into spatial polygons
+plots_618 <- merge(plots_618, dip_df_list[[1]], by.x="Id", by.y="plots")
+plots_716 <- merge(plots_716, dip_df_list[[2]], by.x="Id", by.y="plots")
+plots_814 <- merge(plots_814, dip_df_list[[3]], by.x="Id", by.y="plots")
+
+
+# Check for normality
+shapiro.test(plot_extract_618$`502-E`)
 
 ch_metrics <- function(x){
   CHmedian <- sapply(x, median, na.rm=TRUE)
@@ -136,6 +179,8 @@ rumple <- function(x){
   rumple_df
 }
 
+
+
 min(plot_extract_618$`501-E`)
 
 csm_list <- list(csm_618, csm_716, csm_814)
@@ -171,7 +216,7 @@ autocor_metrics <- function(x, w){
   autocor_df
 }
 
-#Using approx 30 cm x 30 cm weights matrix
+#Using approx 30 cm x 30 cm neighborhood matrix
 autocor_618 <- autocor_metrics(csm_618, matrix(c(1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1), nc=5, nr=5))
 autocor_716 <- autocor_metrics(csm_716, matrix(c(1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1), nc=5, nr=5))
 autocor_814 <- autocor_metrics(csm_814, matrix(c(1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1), nc=5, nr=5))
@@ -180,6 +225,51 @@ plots_618 <- merge(plots_618, autocor_618, by.x="Id", by.y="plots")
 plots_716 <- merge(plots_716, autocor_716, by.x="Id", by.y="plots")
 plots_814 <- merge(plots_814, autocor_814, by.x="Id", by.y="plots")
 
+#-------------------------------------Normalize variables---------------------------------------
+
+library(rcompanion)
+
+shapiro.test(plots_618$crrmedian)
+shapiro.test(plots_618$crriqr)
+shapiro.test(plots_618$dip)
+shapiro.test(plots_618$median)
+shapiro.test(plots_618$iqr) #normal
+shapiro.test(plots_618$skew)
+shapiro.test(plots_618$kurt)
+shapiro.test(plots_618$PlotCRR) #normal
+shapiro.test(plots_618$rumple) #normal
+shapiro.test(plots_618$moran)
+shapiro.test(plots_618$geary)
+
+# NOTE the transformations below are not all natural log. Tukey transformation choses the best transformation method.
+plots_618$crrmedian_ln <- transformTukey(plots_618$crrmedian)
+plots_618$crriqr_ln <- transformTukey(plots_618$crriqr) # still not normal
+plots_618$dip_ln <- transformTukey(plots_618$dip) # still not normal
+plots_618$median_ln <- transformTukey(plots_618$median)
+plots_618$skew_ln <- transformTukey(plots_618$skew) # still not normal
+plots_618$kurt_ln <- transformTukey(plots_618$kurt) # still not normal
+plots_618$moran_ln <- transformTukey(plots_618$moran)
+plots_618$geary_ln <- transformTukey(plots_618$geary)
+
+plots_716$crrmedian_ln <- transformTukey(plots_716$crrmedian)
+plots_716$crriqr_ln <- transformTukey(plots_716$crriqr)
+plots_716$dip_ln <- transformTukey(plots_716$dip) # still not normal
+plots_716$median_ln <- transformTukey(plots_716$median)
+plots_716$skew_ln <- transformTukey(plots_716$skew) # still not normal
+plots_716$kurt_ln <- transformTukey(plots_716$kurt) # still not normal
+plots_716$moran_ln <- transformTukey(plots_716$moran)
+plots_716$geary_ln <- transformTukey(plots_716$geary)
+
+plots_814$crrmedian_ln <- transformTukey(plots_814$crrmedian)
+plots_814$crriqr_ln <- transformTukey(plots_814$crriqr)
+plots_814$dip_ln <- transformTukey(plots_814$dip) # still not normal
+plots_814$median_ln <- transformTukey(plots_814$median)
+plots_814$skew_ln <- transformTukey(plots_814$skew) 
+plots_814$kurt_ln <- transformTukey(plots_814$kurt)
+plots_814$moran_ln <- transformTukey(plots_814$moran) # still not normal
+plots_814$geary_ln <- transformTukey(plots_814$geary)
+
+# --------------------------------------- Regression --------------------------------------------------------------------------------
 # Aggregate treatments
 
 library(data.table)
@@ -208,7 +298,6 @@ dt_814[Treatment %in% toxicity]$Trt_agg <- "toxicity"
 dt_814$Trt_agg <- as.factor(dt_814$Trt_agg)
 plots_814@data <- dt_814
 
-# --------------------------------------- Regression --------------------------------------------------------------------------------
 
 library(PerformanceAnalytics)
 
@@ -216,50 +305,59 @@ plots_618_df <- as.data.frame(plots_618)
 plots_716_df <- as.data.frame(plots_716)
 plots_814_df <- as.data.frame(plots_814)
 
-chart.Correlation(plots_618_df[3:18], 
+chart.Correlation(plots_618_df[,21:28], 
                   method="spearman",
                   histogram=TRUE,
                   pch=16)
 
 # normalize data
-norm_618 <- as.data.frame(scale(plots_618_df[,3:18]))
-norm_618$Treatment <- plots_618_df$Treatment
-norm_618$Id <- plots_618_df$Id
-norm_618$Trt_agg <- plots_618_df$Trt_agg
+norm_618 <- as.data.frame(scale(plots_618@data[,3:27]))
+norm_618$Treatment <- plots_618@data$Treatment
+norm_618$Id <- plots_618@data$Id
+norm_618$Trt_agg <- plots_618@data$Trt_agg
 
-norm_716 <- as.data.frame(scale(plots_716_df[,3:18]))
-norm_716$Treatment <- plots_716_df$Treatment
-norm_716$Id <- plots_716_df$Id
-norm_716$Trt_agg <- plots_716_df$Trt_agg
+norm_716 <- as.data.frame(scale(plots_716@data[,3:27]))
+norm_716$Treatment <- plots_716$Treatment
+norm_716$Id <- plots_716$Id
+norm_716$Trt_agg <- plots_716$Trt_agg
 
-norm_814 <- as.data.frame(scale(plots_814_df[,3:18]))
-norm_814$Treatment <- plots_814_df$Treatment
-norm_814$Id <- plots_814_df$Id
+norm_814 <- as.data.frame(scale(plots_814@data[,3:27]))
+norm_814$Treatment <- plots_814$Treatment
+norm_814$Id <- plots_814$Id
 norm_814$Trt_agg <- plots_814_df$Trt_agg
 
-# all variables - crrmedian+crrmean+crrsd+median+mean+sd+iqr+var+sum+skew+kurt+PlotCRR+chRange+rumple+moran+geary
+# all variables - crrmedian_ln+crriqr_ln+median_ln+iqr+skew_ln+kurt_ln+PlotCRR+rumple+moran_ln+geary_ln+dip_ln
 # 618 variables (post collinearity analysis) - 
-#     all trt classes: crrmedian+crrsd+mean+sd+kurt+geary
-#     agg trt classes: crrmedian+crrsd+skew+kurt+rumple+moran
+#     all trt classes: crrmedian_ln+median_ln+iqr+PlotCRR+rumple+moran_ln+dip_ln
+#     agg trt classes: crrmedian_ln+crriqr_ln+median_ln+skew_ln+rumple+moran_ln+dip_ln
 # 716 variables (post collinearity analysis) - 
-#     all trt classes: crrmean+crrsd+median+kurt+rumple+geary
-#     agg trt classes: 
+#     all trt classes: crrmedian_ln+crriqr_ln+median_ln+skew_ln+rumple+geary_ln+dip_ln
+#     agg trt classes: crrmedian_ln+crriqr_ln+median_ln+skew_ln+rumple+moran_ln+dip_ln
 # 814 variables (post collinearity analysis) - 
-#     all trt classes: crrmean+crrsd+median+iqr+kurt+geary
-#     agg trt classes:
+#     all trt classes: crrmedian_ln+crriqr_ln+median_ln+iqr+kurt_ln+geary_ln+dip_ln
+#     agg trt classes: crrmedian_ln+crriqr_ln+median_ln+iqr+skew_ln+moran_ln+geary_ln+dip_ln
 
 library(car)
-glm_618 <- glm(Treatment ~ crrmedian+crrsd+median+kurt+rumple+geary, data = norm_618, 
+glm_618 <- glm(Trt_agg ~ crrmedian_ln+crriqr_ln+median_ln+skew_ln+rumple+moran_ln+dip_ln, data = norm_618, 
               family = binomial(link="logit"), na.action = na.fail)
 vif(glm_618)
 
-glm_716 <- glm(Treatment ~ crrmean+crrsd+median+kurt+rumple+moran, data = norm_716, 
+glm_716 <- glm(Trt_agg ~ crrmedian_ln+crriqr_ln+median_ln+skew_ln+rumple+moran_ln+dip_ln, data = norm_716, 
                family = binomial(link="logit"), na.action = na.fail)
 vif(glm_716)
 
-glm_814 <- glm(Treatment ~ crrmedian+median+iqr+kurt+PlotCRR+geary, data = norm_814, 
+glm_814 <- glm(Trt_agg ~ crrmedian_ln+crriqr_ln+median_ln+iqr+skew_ln+moran_ln+geary_ln+dip_ln, data = norm_814, 
                family = binomial(link="logit"), na.action = na.fail)
 vif(glm_814)
+
+# Try multinominal logisitic regression with nnet package
+
+library(nnet)
+mltnom_816 <- multinom(Trt_agg ~ crrmedian_ln+crriqr_ln+median_ln+skew_ln+rumple+moran_ln+dip_ln, data = norm_618)
+z <- summary(mltnom_816)$coefficients/summary(mltnom_816)$standard.errors
+z
+p <- (1 - pnorm(abs(z), 0, 1)) * 2
+p
 
 # Weights matrix
 w <- knn2nb(knearneigh(coordinates(plots), k=8))
@@ -305,12 +403,15 @@ summary.glm(glm_best_618_agg)
 
 modsel_716 <- dredge(glm_716, beta = "none", trace = T)
 
-glm_best_716 = glm(Treatment ~ crrsd+median,
+glm_best_716 = glm(Trt_agg ~ crrmedian_ln+median_ln+dip_ln+moran_ln+skew_ln,
                    data=norm_716,
                    family = binomial(link="logit"), na.action = na.fail
 )
 
 summary.glm(glm_best_716)
+
+plots_716$glm_trtag_resi <-glm_best_618$residuals
+spplot(plots_716, zcol = "glm_trtag_resi")
 
 glm_814 = glm(Treatment ~ crrmedian+median+iqr+kurt+PlotCRR+geary,
               data=norm_814,
@@ -330,11 +431,11 @@ summary.glm(glm_best_814)
 # ------------------------------------- Random Forest Classification ------------------------------------------------------------
 library(randomForest)
 set.seed(42)
-train_data_indices <- rep(FALSE, nrow(plots_618_df))
-train_data_indices[sample(1:nrow(plots_618_df), round(0.8 * nrow(plots_618_df)))] <- TRUE # randomly select 80% of the data for training
-rf_regression_618<- randomForest(Trt_agg ~ crrmedian+crrsd+skew+kurt+rumple+moran, data=plots_618_df[train_data_indices, ], importance=T)
-rf_regression_618
-varImpPlot(rf_regression_618)
-pred_trt <- predict(rf_regression_618, plots_618_df[!train_data_indices,]) # predict the rings
-plot(plots_618_df$Treatment[!train_data_indices], pred_trt, xlab="Observed", ylab="Predicted")
+train_data_indices <- rep(FALSE, nrow(plots_716_df))
+train_data_indices[sample(1:nrow(plots_716_df), round(0.8 * nrow(plots_716_df)))] <- TRUE # randomly select 80% of the data for training
+rf_regression_716<- randomForest(Trt_agg ~ crrmedian_ln+crriqr_ln+median_ln+skew_ln+rumple+moran_ln+dip_ln, data=plots_716_df[train_data_indices, ], importance=T)
+rf_regression_716
+varImpPlot(rf_regression_716)
+pred_trt <- predict(rf_regression_716, plots_716_df[!train_data_indices,]) # predict the rings
+plot(plots_716_df$Treatment[!train_data_indices], pred_trt, xlab="Observed", ylab="Predicted")
 abline(a=0, b=1, lty=2, col=2)
