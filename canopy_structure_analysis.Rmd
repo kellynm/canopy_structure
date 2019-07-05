@@ -430,7 +430,7 @@ plots_1cm$wateriqr_ln <- transformTukey(plots_1cm$wateriqr)
 plots_1cm$PlotCRR_ln <- transformTukey(plots_1cm$PlotCRR)
 plots_1cm$rumple_ln <- transformTukey(plots_1cm$rumple)
 #plots_1cm$moran_ape_ln <- transformTukey(plots_1cm$moran_ape)
-plots_1cm$dip_ln <- transformTukey(plots_1cm$dip)
+#plots_1cm$dip_ln <- transformTukey(plots_1cm$dip)
 
 plots_5cm$BuAc_ln <- transformTukey(plots_5cm$BuAc)
 plots_5cm$iqr_ln <- transformTukey(plots_5cm$iqr)
@@ -594,20 +594,20 @@ library(olsrr)
 library(spatialreg)
 library(MuMIn)
 
-# normalize data
-norm_1cm <- as.data.frame(scale(plots_1cm@data[,c(21, 23, 26, 29, 30,34, 35, 36, 37, 38, 39, 40 ,41, 42, 43, 44)]))
+# standardize data
+norm_1cm <- as.data.frame(scale(plots_1cm@data[,c(21, 23, 26, 29, 30,34, 35, 36, 37, 38, 39, 40 ,41, 42, 43, 44)]), scale = F)
 norm_1cm$Trt <- plots_1cm$Trt
 norm_1cm$id <- plots_1cm$id
 
-norm_5cm <- as.data.frame(scale(plots_5cm@data[,c(21, 23, 26, 29, 30,34, 35, 36, 37, 38, 39, 40 ,41, 42, 43, 44)]))
+norm_5cm <- as.data.frame(scale(plots_5cm@data[,c(10,20,21, 23, 26, 29, 30,34, 35, 36, 37, 38, 39, 40 ,41, 42, 43, 44)]), center = T, scale = FALSE)
 norm_5cm$Trt <- plots_5cm$Trt
 norm_5cm$id <- plots_5cm$id
 
-norm_10cm <- as.data.frame(scale(plots_10cm@data[,c(21, 23, 26, 29, 30,34, 35, 36, 37, 38, 39, 40 ,41, 42, 43, 44)]))
+norm_10cm <- as.data.frame(scale(plots_10cm@data[,c(21, 23, 26, 29, 30,34, 35, 36, 37, 38, 39, 40 ,41, 42, 43, 44)]), scale = F)
 norm_10cm$Trt <- plots_10cm$Trt
 norm_10cm$id <- plots_10cm$id
 
-norm_20cm <- as.data.frame(scale(plots_20cm@data[,c(21, 23, 26, 29, 30,34, 35, 36, 37, 38, 39, 40 ,41, 42, 43, 44)]))
+norm_20cm <- as.data.frame(scale(plots_20cm@data[,c(21, 23, 26, 29, 30,34, 35, 36, 37, 38, 39, 40 ,41, 42, 43, 44)]), scale = F)
 norm_20cm$Trt <- plots_20cm$Trt
 norm_20cm$id <- plots_20cm$id
 
@@ -657,7 +657,7 @@ norm_1cm$ols_res <- ols_yield_1cm$residuals
 #summary(ols_yield_1cm)
 moran.test(norm_1cm$ols_res, nb2listw(w))
 
-sar_1cm <- spautolm(BuAc_ln ~ median+skew+PlotCRR_ln+crrmedian_ln+crriqr+Trt+AUDPC_ln+watermedian_ln+wateriqr_ln+geary+iqr_ln+dip_ln, data = norm_1cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+sar_1cm <- spautolm(BuAc_ln ~ median+skew+PlotCRR_ln+crrmedian_ln+crriqr+Trt+AUDPC_ln+watermedian_ln+wateriqr_ln+geary+iqr_ln, data = norm_1cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
 summary(sar_1cm)
 sar_resi <- sar_1cm$fit[[9]]
 norm_1cm$sar_resi <- sar_resi
@@ -666,8 +666,20 @@ moran.test(norm_1cm$sar_resi, nb2listw(w))
 modsel_1cm <- dredge(sar_1cm, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
 topmod_1cm <- spautolm(BuAc_ln ~ median + AUDPC_ln + crrmedian_ln, data = norm_1cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
 summary(topmod_1cm)
+
 r2_1cm <- r2(topmod_1cm)
 adj_r2_1cm <- adj_r2(topmod_1cm)
+
+vars <- names(topmod_1cm$fit[[1]])[-1]
+sd_all <- numeric(length(vars))
+mean_all <- numeric(length(vars))
+count <- 1
+for (x in vars){
+  values <- as.data.frame(plots_1cm)[x]
+  sd_all[count] <- sd(values[,1])
+  mean_all[count] <- mean(values[,1])
+  count <- count+1
+}
 
 # backwards stepwise - median+AUDPC+geary
 # sp_err_yi_1cm <- errorsarlm(BuAc ~ median+PlotCRR+crrsd+crrmean+kurt+Trt+AUDPC+watersum+geary+iqr, data = norm_1cm, listw = nb2listw(w), zero.policy = T)
@@ -695,10 +707,21 @@ moran.test(norm_5cm$sar_resi, nb2listw(w))
 
 modsel_5cm <- dredge(sar_5cm, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
 modsel_5cm
-topmod_5cm <- spatialreg::spautolm(BuAc_ln ~ median + crrmedian_ln + skew, data = norm_5cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+topmod_5cm <- spatialreg::spautolm(BuAc_ln ~ median + crrmedian_ln + skew +Trt, data = norm_5cm, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
 summary(topmod_5cm)
 r2_5cm <- r2(topmod_5cm)
 adj_r2_5cm <- adj_r2(topmod_5cm)
+
+vars <- names(topmod_5cm$fit[[1]])[-1]
+sd_all <- numeric(length(vars))
+mean_all <- numeric(length(vars))
+count <- 1
+for (x in vars){
+  values <- as.data.frame(plots_5cm)[x]
+  sd_all[count] <- sd(values[,1])
+  mean_all[count] <- mean(values[,1])
+  count <- count+1
+}
 
 # model selection results when using same dependent variables as 1cm models, ignoring collinearity analysis results
 
@@ -775,30 +798,81 @@ adj_r2_20cm <- adj_r2(topmod_20cm)
 ```{r tables}
 
 extractResults <- function(x){
-  sp_err_se <- x$rest.se
-  sp_err_p <- summary(x)$Coef[,4]
-  results <- cbind(sp_err_se, sp_err_p)
-  results
+  coef <- coef(x)[-length(coef(x))]
+  se <- summary(x)$rest.se
+  p <- summary(x)$Coef[,4]
+  results_var <- cbind(coef,se,p)
+  mod_p <- summary(x)$LR1$p.value
+  lambda <- summary(x)$lambda
+  aic <- AIC(x)
+  ll <- summary(x)$LL
+  r2 <- r2(x)
+  adjr2 <- adj_r2(x)
+  results_mod <- cbind(ll, mod_p, lambda, aic, r2, adjr2)
+  results <- list(results_var, results_mod)
 }
 
-coeff_5cm<-sp_err_yi_5cm$coefficients
-coeff_1cm<-sp_err_yi_1cm$coefficients
-coeff_10cm<-sp_err_yi_10cm$coefficients
-coeff_20cm<-sp_err_yi_20cm$coefficients
+sar_results_1cm <- extractResults(topmod_1cm)
+sar_results_5cm <- extractResults(topmod_5cm)
+sar_results_10cm <- extractResults(topmod_10cm)
+sar_results_20cm <- extractResults(topmod_20cm)
 
-sar_results_1cm <- extractResults(sp_err_yi_1cm)
-sar_results_1cm <- cbind(coeff_1cm, sar_results_1cm)
-sar_results_5cm <- extractResults(sp_err_yi_5cm)
-sar_results_5cm <- cbind(coeff_5cm, sar_results_5cm)
-sar_results_10cm <- extractResults(sp_err_yi_10cm)
-sar_results_10cm <- cbind(coeff_10cm, sar_results_10cm)
-sar_results_20cm <- extractResults(sp_err_yi_20cm)
-sar_results_20cm <- cbind(coeff_20cm, sar_results_20cm)
+write.csv(sar_results_1cm, "Q:/My Drive/Research/Canopy_Morphology/results/sar_results_1cm.csv")
+write.csv(sar_results_5cm, "Q:/My Drive/Research/Canopy_Morphology/results/sar_results_5cm.csv")
+write.csv(sar_results_10cm, "Q:/My Drive/Research/Canopy_Morphology/results/sar_results_10cm.csv")
+write.csv(sar_results_20cm, "Q:/My Drive/Research/Canopy_Morphology/results/sar_results_20cm.csv")
 
-write.csv(sar_results_1cm, "/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/Research/Canopy_Morphology/results/sar_results_1cm.csv")
-write.csv(sar_results_5cm, "/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/Research/Canopy_Morphology/results/sar_results_5cm.csv")
-write.csv(sar_results_10cm, "/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/Research/Canopy_Morphology/results/sar_results_10cm.csv")
-write.csv(sar_results_20cm, "/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/Research/Canopy_Morphology/results/sar_results_20cm.csv")
+
+
+```
+
+```{r randomforest}
+
+# ------------------------------------- Random Forest Classification ------------------------------------------------------
+library(randomForest)
+set.seed(42)
+train_data_indices <- rep(FALSE, nrow(norm_1cm))
+train_data_indices[sample(1:nrow(norm_1cm), round(0.7 * nrow(norm_1cm)))] <- TRUE # randomly select 80% of the data for training
+rf_regression_1cm<- randomForest(BuAc_ln ~ median+skew+PlotCRR_ln+crrmedian_ln+crriqr+Trt+AUDPC_ln+geary+iqr_ln, data=norm_1cm[train_data_indices, ], importance=T)
+rf_regression_1cm
+varImpPlot(rf_regression_1cm)
+pred_trt <- predict(rf_regression_1cm, norm_1cm[!train_data_indices,]) # predict the rings
+table(pred_trt, norm_1cm$BuAc_ln[!train_data_indices])
+plot(norm_1cm$BuAc_ln[!train_data_indices], pred_trt, xlab="Observed", ylab="Predicted")
+#abline(a=0, b=1, lty=2, col=2)
+
+set.seed(42)
+train_data_indices <- rep(FALSE, nrow(norm_5cm))
+train_data_indices[sample(1:nrow(norm_5cm), round(0.7 * nrow(norm_5cm)))] <- TRUE # randomly select 80% of the data for training
+rf_regression_5cm<- randomForest(BuAc_ln ~ median+skew+PlotCRR_ln+crrmedian_ln+crriqr+Trt+AUDPC_ln+geary+iqr_ln, data=norm_5cm[train_data_indices, ], importance=T)
+rf_regression_5cm
+varImpPlot(rf_regression_5cm)
+pred_trt <- predict(rf_regression_5cm, norm_5cm[!train_data_indices,]) # predict the rings
+table(pred_trt, norm_5cm$BuAc_ln[!train_data_indices])
+plot(norm_5cm$BuAc_ln[!train_data_indices], pred_trt, xlab="Observed", ylab="Predicted")
+#abline(a=0, b=1, lty=2, col=2)
+
+set.seed(42)
+train_data_indices <- rep(FALSE, nrow(norm_10cm))
+train_data_indices[sample(1:nrow(norm_10cm), round(0.7 * nrow(norm_10cm)))] <- TRUE # randomly select 80% of the data for training
+rf_regression_10cm<- randomForest(BuAc_ln ~ median+skew+PlotCRR_ln+crrmedian_ln+crriqr+Trt+AUDPC_ln+geary+iqr_ln, data=norm_10cm[train_data_indices, ], importance=T)
+rf_regression_10cm
+varImpPlot(rf_regression_10cm)
+pred_trt <- predict(rf_regression_10cm, norm_10cm[!train_data_indices,]) # predict the rings
+table(pred_trt, norm_10cm$BuAc_ln[!train_data_indices])
+plot(norm_10cm$BuAc_ln[!train_data_indices], pred_trt, xlab="Observed", ylab="Predicted")
+#abline(a=0, b=1, lty=2, col=2)
+
+set.seed(42)
+train_data_indices <- rep(FALSE, nrow(norm_20cm))
+train_data_indices[sample(1:nrow(norm_20cm), round(0.7 * nrow(norm_20cm)))] <- TRUE # randomly select 80% of the data for training
+rf_regression_20cm<- randomForest(BuAc_ln ~ median+skew+PlotCRR_ln+crrmedian_ln+crriqr+Trt+AUDPC_ln+geary+iqr_ln, data=norm_20cm[train_data_indices, ], importance=T)
+rf_regression_20cm
+varImpPlot(rf_regression_20cm)
+pred_trt <- predict(rf_regression_20cm, norm_20cm[!train_data_indices,]) # predict the rings
+table(pred_trt, norm_20cm$BuAc_ln[!train_data_indices])
+plot(norm_20cm$BuAc_ln[!train_data_indices], pred_trt, xlab="Observed", ylab="Predicted")
+#abline(a=0, b=1, lty=2, col=2)
 
 ```
 

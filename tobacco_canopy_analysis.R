@@ -14,6 +14,14 @@ library(viridis)
 library(randomForest)
 library(diptest)
 library(ggpubr)
+library(foreign)
+library(mlogit)
+library(car)
+library(nnet)
+library(MuMIn)
+library(data.table)
+library(PerformanceAnalytics)
+library(rcompanion)
 
 #Load raster data for all dates
 #setwd("/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/LkWheeler_Sorghum/LkWheeler_Fusarium_Sorghum")
@@ -22,9 +30,9 @@ setwd("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/la
 tobacco_area <- readOGR("Boundary", "Boundary", stringsAsFactors = F)
 tobacco_area <- spTransform(tobacco_area, CRS("+proj=lcc +lat_1=36.16666666666666 +lat_2=34.33333333333334 +lat_0=33.75 +lon_0=-79 +x_0=609601.22 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"))
 
-csm_618 <- crop(raster('CSM/CSM_618.tif'), tobacco_area)
-csm_716 <- crop(raster('CSM/CSM_716.tif'), tobacco_area)
-csm_814 <- crop(raster('CSM/CSM_814.tif'), tobacco_area)
+csm_618 <- crop(raster('CSM/CSM_618.tif'), tobacco_area)*100 #convert to cm
+csm_716 <- crop(raster('CSM/CSM_716.tif'), tobacco_area)*100
+csm_814 <- crop(raster('CSM/CSM_814.tif'), tobacco_area)*100
 
 csm_618_velox <- velox(csm_618)
 csm_716_velox <- velox(csm_716)
@@ -154,13 +162,6 @@ plots_814 <- merge(plots_814, ch_df_list[[3]], by.x="Id", by.y="plots")
 #--------------------------------------------------------- rumple index -----------------------------------------------------------------
 library(lidR)
 
-extract <- mask(csm_618, plots[position,])
-extract_df <- rasterToPoints(extract)
-rumple <- rumple_index(extract_df[,1], extract_df[,2], extract_df[,3])
-
-tmp <- plots@data
-position <- match("606-E", tmp$Id)
-
 rumple <- function(x){
   plotNums <- plots$Id
   rumple_all <- numeric(length(plotNums))
@@ -237,7 +238,7 @@ shapiro.test(plots_618$iqr) #normal
 shapiro.test(plots_618$skew)
 shapiro.test(plots_618$kurt)
 shapiro.test(plots_618$PlotCRR) #normal
-shapiro.test(plots_618$rumple) #normal
+shapiro.test(plots_618$rumple)
 shapiro.test(plots_618$moran)
 shapiro.test(plots_618$geary)
 
@@ -305,13 +306,13 @@ plots_618_df <- as.data.frame(plots_618)
 plots_716_df <- as.data.frame(plots_716)
 plots_814_df <- as.data.frame(plots_814)
 
-chart.Correlation(plots_618_df[,21:28], 
-                  method="spearman",
+chart.Correlation(plots_618_df[,c(3, 7, 14, 17, 18)], 
+                  method="pearson",
                   histogram=TRUE,
                   pch=16)
 
 # normalize data
-norm_618 <- as.data.frame(scale(plots_618@data[,3:27]))
+norm_618 <- as.data.frame(scale(plots_618@data[,c(3, 5,6, 7, 10, 13, 14, 15, 17, 18)]))
 norm_618$Treatment <- plots_618@data$Treatment
 norm_618$Id <- plots_618@data$Id
 norm_618$Trt_agg <- plots_618@data$Trt_agg
@@ -338,7 +339,7 @@ norm_814$Trt_agg <- plots_814_df$Trt_agg
 #     agg trt classes: crrmedian_ln+crriqr_ln+median_ln+iqr+skew_ln+moran_ln+geary_ln+dip_ln
 
 library(car)
-glm_618 <- glm(Trt_agg ~ crrmedian_ln+crriqr_ln+median_ln+skew_ln+rumple+moran_ln+dip_ln, data = norm_618, 
+glm_618 <- glm(Trt_agg ~ crrmedian+median+kurt+rumple+moran+dip, data = plots_618, 
               family = binomial(link="logit"), na.action = na.fail)
 vif(glm_618)
 
@@ -353,53 +354,54 @@ vif(glm_814)
 # Try multinominal logisitic regression with nnet package
 
 library(nnet)
-mltnom_816 <- multinom(Trt_agg ~ crrmedian_ln+crriqr_ln+median_ln+skew_ln+rumple+moran_ln+dip_ln, data = norm_618)
-z <- summary(mltnom_816)$coefficients/summary(mltnom_816)$standard.errors
+plots_618_df$Trt_agg <- relevel(plots_618_df$Trt_agg, ref = "100% Control")
+mltnom_618 <- multinom(Trt_agg ~ crrmedian+median+kurt+rumple+moran+crriqr+skew+iqr, data = plots_618_df, na.action = na.fail)
+summary(mltnom_618)
+
+modsel_618 <- dredge(mltnom_618)
+modsel_618
+
+topmod_618 <- multinom(Trt_agg ~ median+kurt+rumple+moran+skew+iqr, data = plots_618_df, na.action = na.fail)
+summary(topmod_618)
+z <- summary(topmod_618)$coefficients/summary(topmod_618)$standard.errors
 z
 p <- (1 - pnorm(abs(z), 0, 1)) * 2
 p
 
-# Weights matrix
-w <- knn2nb(knearneigh(coordinates(plots), k=8))
+coefs_618 <- coef(topmod_618)
+exp(coefs_618) #transformed to odds ratio
+(exp(coefs_618)-1)*100 # percent change in the odds for a one unit increase in the independent variable
 
-library(MuMIn)
-
-train_data_indices <- rep(FALSE, nrow(norm_618))
-train_data_indices[sample(1:nrow(norm_618), round(0.8 * nrow(norm_618)))] <- TRUE # randomly select 80% of the data for training
-
-train_618 <- norm_618[train_data_indices, ]
-
-glm_618 = glm(Treatment ~ crrmedian+crrsd+mean+sd+kurt+geary,
-              data=train_618,
-              family = binomial(link="logit"), na.action = na.fail
-)
-
-modsel_618 <- dredge(glm_618, beta = "none", trace = T)
-
-glm_best_618 = glm(Treatment ~ crrsd,
-                   data=norm_618,
-                   family = binomial(link="logit"), na.action = na.fail
-)
-
-glm_best_618_agg = glm(Trt_agg ~ crrmedian+sd+sum+skew+kurt+moran,
-                   data=norm_618,
-                   family = binomial(link="logit"), na.action = na.fail
-)
-
-summary.glm(glm_best_618)
-summary.glm(glm_best_618_agg)
-# norm_618$resi <- glm_best_618$residuals
-# moran.test(norm_618$resi, nb2listw(w))
+# Try binary logistic regression with 100% control as baseline
+# def_100 <- as.data.frame(dt_618[Trt_agg == "100% Control" | Trt_agg == "deficiency",])
+# def_100 <- droplevels(def_100)
+# tox_100 <- as.data.frame(dt_618[Trt_agg == "100% Control" | Trt_agg == "toxicity",])
+# tox_100 <- droplevels(tox_100)
+# control_0_100 <- as.data.frame(dt_618[Trt_agg == "100% Control" | Trt_agg == "0% Control",])
+# control_0_100 <- droplevels(control_0_100)
 # 
-# durbinWatsonTest(glm_best_618)
+# binary_618 <- glm(Trt_agg ~ crrmedian+median+kurt+rumple+moran+crriqr+skew+iqr, data = control_0_100, family = binomial, na.action = na.fail)
+# modsel_618_binary <- dredge(binary_618)
+# topmod_618_binary <- glm(Trt_agg ~ crrmedian+iqr+moran+rumple+skew, data = tox_100, family = binomial)
+# summary(topmod_618_binary)
 # 
-# library(ROCR)
-# pred_data_618 <- norm_618[!train_data_indices, ]
-# pred_618 = predict(glm_best_618,newdata=pred_data_618,type="response")
-# fitpred = prediction(fitpreds,data$val$income)
-# fitperf = performance(fitpred,"tpr","fpr")
-# plot(fitperf,col="green",lwd=2,main="ROC Curve for Logistic:  Adult")
-# abline(a=0,b=1,lwd=2,lty=2,col="gray")
+# library(pscl)
+# 
+# pR2(topmod_618_binary)
+
+# Try multinomial logisitc regression with mlogit package
+# library(foreign)
+# library(mlogit)
+# 
+# mlogit_data_618 <- mlogit.data(plots_618_df, choice = "Trt_agg", shape = "wide")
+# mlogit_618 <- mlogit(Trt_agg~crrmedian+kurt+median+skew_ln+rumple+moran, data = mlogit_data_618,
+#                      method = "nr", print.level = 0)
+# summary(mlogit_618)
+# 
+# # Weights matrix
+# w <- knn2nb(knearneigh(coordinates(plots), k=8))
+
+
 
 modsel_716 <- dredge(glm_716, beta = "none", trace = T)
 
@@ -431,11 +433,34 @@ summary.glm(glm_best_814)
 # ------------------------------------- Random Forest Classification ------------------------------------------------------------
 library(randomForest)
 set.seed(42)
+train_data_indices <- rep(FALSE, nrow(plots_618_df))
+train_data_indices[sample(1:nrow(plots_618_df), round(0.7 * nrow(plots_618_df)))] <- TRUE # randomly select 80% of the data for training
+rf_regression_618<- randomForest(Trt_agg ~ crrmedian_ln+median_ln+kurt_ln+rumple+geary_ln+dip_ln, data=plots_618_df[train_data_indices, ], importance=T)
+rf_regression_618
+varImpPlot(rf_regression_618)
+pred_trt <- predict(rf_regression_618, plots_618_df[!train_data_indices,]) # predict the rings
+table(pred_trt, plots_618_df$Trt_agg[!train_data_indices])
+plot(plots_618_df$Trt_agg[!train_data_indices], pred_trt, xlab="Observed", ylab="Predicted")
+abline(a=0, b=1, lty=2, col=2)
+
+set.seed(42)
 train_data_indices <- rep(FALSE, nrow(plots_716_df))
-train_data_indices[sample(1:nrow(plots_716_df), round(0.8 * nrow(plots_716_df)))] <- TRUE # randomly select 80% of the data for training
-rf_regression_716<- randomForest(Trt_agg ~ crrmedian_ln+crriqr_ln+median_ln+skew_ln+rumple+moran_ln+dip_ln, data=plots_716_df[train_data_indices, ], importance=T)
+train_data_indices[sample(1:nrow(plots_716_df), round(0.7 * nrow(plots_716_df)))] <- TRUE # randomly select 80% of the data for training
+rf_regression_716<- randomForest(Trt_agg ~ crrmedian_ln+median_ln+kurt_ln+rumple+moran_ln+dip_ln, data=plots_716_df[train_data_indices, ], importance=T)
 rf_regression_716
 varImpPlot(rf_regression_716)
 pred_trt <- predict(rf_regression_716, plots_716_df[!train_data_indices,]) # predict the rings
-plot(plots_716_df$Treatment[!train_data_indices], pred_trt, xlab="Observed", ylab="Predicted")
+table(pred_trt, plots_716_df$Trt_agg[!train_data_indices])
+plot(plots_716_df$Trt_agg[!train_data_indices], pred_trt, xlab="Observed", ylab="Predicted")
+abline(a=0, b=1, lty=2, col=2)
+
+set.seed(42)
+train_data_indices <- rep(FALSE, nrow(plots_814_df))
+train_data_indices[sample(1:nrow(plots_814_df), round(0.7 * nrow(plots_814_df)))] <- TRUE # randomly select 80% of the data for training
+rf_regression_814<- randomForest(Trt_agg ~ crrmedian_ln+median_ln+kurt_ln+rumple+moran_ln+dip_ln, data=plots_814_df[train_data_indices, ], importance=T)
+rf_regression_814
+varImpPlot(rf_regression_814)
+pred_trt <- predict(rf_regression_814, plots_814_df[!train_data_indices,]) # predict the rings
+table(pred_trt, plots_814_df$Trt_agg[!train_data_indices])
+plot(plots_814_df$Trt_agg[!train_data_indices], pred_trt, xlab="Observed", ylab="Predicted")
 abline(a=0, b=1, lty=2, col=2)
