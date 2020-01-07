@@ -31,25 +31,39 @@ library(MuMIn)
 library(data.table)
 library(PerformanceAnalytics)
 library(rcompanion)
+library(olsrr)
+library(spatialreg)
 
 #Load raster data for all dates
 #setwd("/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/LkWheeler_Sorghum/LkWheeler_Fusarium_Sorghum")
-setwd("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/layers")
+setwd("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2018/canopy_analysis/layers")
 
-tobacco_area <- readOGR("Boundary", "Boundary", stringsAsFactors = F)
+tobacco_area <- readOGR("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2018/canopy_analysis/layers/Boundary", "Boundary", stringsAsFactors = F)
 tobacco_area <- spTransform(tobacco_area, CRS("+proj=lcc +lat_1=36.16666666666666 +lat_2=34.33333333333334 +lat_0=33.75 +lon_0=-79 +x_0=609601.22 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"))
 
-csm_618 <- crop(raster('CSM/CSM_618.tif'), tobacco_area) #convert to cm
-csm_716 <- crop(raster('CSM/CSM_716.tif'), tobacco_area)
-csm_814 <- crop(raster('CSM/CSM_814.tif'), tobacco_area)
+csm_618 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2018/canopy_analysis/layers/CSM/CSM_618.tif'), tobacco_area) #convert to cm
+csm_716 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2018/canopy_analysis/layers/CSM/CSM_716.tif'), tobacco_area)
+csm_814 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2018/canopy_analysis/layers/CSM/CSM_814.tif'), tobacco_area)
 
 csm_618_velox <- velox(csm_618)
 csm_716_velox <- velox(csm_716)
 csm_814_velox <- velox(csm_814)
 
-plots <- readOGR("plots", "plots_reshape", stringsAsFactors = F)
+
+plots <- readOGR("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2018/canopy_analysis/layers/plots", "plots_reshape", stringsAsFactors = F)
 plots$Treatment <- as.factor(plots$Treatment)
 plots <- spTransform(plots, CRS("+proj=lcc +lat_1=36.16666666666666 +lat_2=34.33333333333334 +lat_0=33.75 +lon_0=-79 +x_0=609601.22 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"))
+
+fert_plot_ids <- plots$Id[grep("-C", c(plots$Id, "-C"))]
+fert_plots <- plots$Id %in% fert_plot_ids
+
+plots$nutr_id <- substr(plots$Id, 1, 3)
+plots$nutr_id[fert_plots] <- fert_plot_ids
+
+nutrient <- fread("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2018/2018 Tobacco Field Tissue Data.csv")
+names(nutrient) <- c("Plot","Treatment", "Sample #",  "N","P","K","Mg", "Ca","S","Zn", "Mn", "Cu", "Fe", "B", "Al", "Na") 
+
+plots <- merge(plots, nutrient, by.x="nutr_id", by.y='Plot')
 
 plots_618 <- plots
 plots_716 <- plots
@@ -211,7 +225,7 @@ plots_814 <- merge(plots_814, rumple_df_list[[3]], by.x="Id", by.y="plots")
 autocor_metrics <- function(x, w){
   plotNums <- plots$Id
   morans_all <- numeric(length(plotNums))
-  moran_local_all <- numeric(length(plotNums))
+  #moran_local_all <- numeric(length(plotNums))
   geary_all <- numeric(length(plotNums))
   count <- 1
   
@@ -221,63 +235,19 @@ autocor_metrics <- function(x, w){
     extract <- crop(x, plots[position,])
     moran <- Moran(extract, w)
     morans_all[count] <- moran
-    moran_local <- MoranLocal(extract, w)
-    moran_local_all[count] <- moran_local
+    #moran_local <- MoranLocal(extract, w)
+    #moran_local_all[count] <- moran_local
     geary <- Geary(extract, w)
     geary_all[count] <- geary
     count <- count+1
   }
   
   names(morans_all) <- plots$Id
-  names(morans_local_all) <- plots$Id
+  #names(morans_local_all) <- plots$Id
   names(geary_all) <- plots$Id
   autocor_df <- data.frame(plots=plots$Id, moran= morans_all, geary=geary_all)
   autocor_df
 }
-
-autocor_rasters <- function(x, w){
-  plotNums <- plots$Id
-  moran_local_all <- as.list(x)
-  count <- 1
-    
-  for (num in plotNums){
-    tmp <- plots@data
-    position <- match(num, tmp$Id)
-    extract <- crop(x, plots[position,])
-    moran_local <- MoranLocal(extract, w)
-    moran_local_all <- append(moran_local_all, moran_local)
-    count <- count+1
-  }
-  
-  moran_local_all <- moran_local_all[-1]
-  names(moran_local_all) <- plots$Id
-  moran_local_all
-}
-
-local_moran_plots_618 <- autocor_rasters(csm_618, matrix(c(1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1), nc=5, nr=5))
-names(local_moran_plots_618) <- NULL
-local_moran_plots_618$filename <- 'moran_618.tif'
-local_moran_plots_618$overwrite <- TRUE
-local_moran_plots_618$fun <- sum
-merged_local_moran_plots_618 <- do.call(raster::merge, local_moran_plots_618)
-writeRaster(merged_local_moran_plots_618, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/layers/moran/local_moran_plots_618.tif", format="GTiff", overwrite = T)
-
-local_moran_plots_716 <- autocor_rasters(csm_716, matrix(c(1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1), nc=5, nr=5))
-names(local_moran_plots_716) <- NULL
-local_moran_plots_716$filename <- 'moran_716.tif'
-local_moran_plots_716$overwrite <- TRUE
-local_moran_plots_716$fun <- sum
-merged_local_moran_plots_716 <- do.call(raster::merge, local_moran_plots_716)
-writeRaster(merged_local_moran_plots_716, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/layers/moran/local_moran_plots_716.tif", format="GTiff", overwrite = T)
-
-local_moran_plots_814 <- autocor_rasters(csm_814, matrix(c(1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1), nc=5, nr=5))
-names(local_moran_plots_814) <- NULL
-local_moran_plots_814$filename <- 'moran_814.tif'
-local_moran_plots_814$overwrite <- TRUE
-local_moran_plots_814$fun <- sum
-merged_local_moran_plots_814 <- do.call(raster::merge, local_moran_plots_814)
-writeRaster(merged_local_moran_plots_814, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/layers/moran/local_moran_plots_814.tif", format="GTiff", overwrite = T)
-
 
 #Using approx 30 cm x 30 cm neighborhood matrix
 autocor_618 <- autocor_metrics(csm_618, matrix(c(1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1), nc=5, nr=5))
@@ -287,25 +257,87 @@ autocor_814 <- autocor_metrics(csm_814, matrix(c(1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1
 plots_618 <- merge(plots_618, autocor_618, by.x="Id", by.y="plots")
 plots_716 <- merge(plots_716, autocor_716, by.x="Id", by.y="plots")
 plots_814 <- merge(plots_814, autocor_814, by.x="Id", by.y="plots")
+
+
+# Create rasters representing local Moran's I for visualization
+# autocor_rasters <- function(x, w){
+#   plotNums <- plots$Id
+#   moran_local_all <- as.list(x)
+#   count <- 1
+#     
+#   for (num in plotNums){
+#     tmp <- plots@data
+#     position <- match(num, tmp$Id)
+#     extract <- crop(x, plots[position,])
+#     moran_local <- MoranLocal(extract, w)
+#     moran_local_all <- append(moran_local_all, moran_local)
+#     count <- count+1
+#   }
+#   
+#   moran_local_all <- moran_local_all[-1]
+#   names(moran_local_all) <- plots$Id
+#   moran_local_all
+# }
+# 
+# local_moran_plots_618 <- autocor_rasters(csm_618, matrix(c(1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1), nc=5, nr=5))
+# names(local_moran_plots_618) <- NULL
+# local_moran_plots_618$filename <- 'moran_618.tif'
+# local_moran_plots_618$overwrite <- TRUE
+# local_moran_plots_618$fun <- sum
+# merged_local_moran_plots_618 <- do.call(raster::merge, local_moran_plots_618)
+# #writeRaster(merged_local_moran_plots_618, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/layers/moran/local_moran_plots_618.tif", format="GTiff", overwrite = T)
+# 
+# local_moran_plots_716 <- autocor_rasters(csm_716, matrix(c(1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1), nc=5, nr=5))
+# names(local_moran_plots_716) <- NULL
+# local_moran_plots_716$filename <- 'moran_716.tif'
+# local_moran_plots_716$overwrite <- TRUE
+# local_moran_plots_716$fun <- sum
+# merged_local_moran_plots_716 <- do.call(raster::merge, local_moran_plots_716)
+# #writeRaster(merged_local_moran_plots_716, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/layers/moran/local_moran_plots_716.tif", format="GTiff", overwrite = T)
+# 
+# local_moran_plots_814 <- autocor_rasters(csm_814, matrix(c(1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1), nc=5, nr=5))
+# names(local_moran_plots_814) <- NULL
+# local_moran_plots_814$filename <- 'moran_814.tif'
+# local_moran_plots_814$overwrite <- TRUE
+# local_moran_plots_814$fun <- sum
+# merged_local_moran_plots_814 <- do.call(raster::merge, local_moran_plots_814)
+# #writeRaster(merged_local_moran_plots_814, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/layers/moran/local_moran_plots_814.tif", format="GTiff", overwrite = T)
+
+
 ```
 
 ```{r var-norm}
 
 library(rcompanion)
 
-# shapiro.test(plots_618$crrmedian)
+shapiro.test(plots_618$crrmedian)
 # shapiro.test(plots_618$crriqr)
 # shapiro.test(plots_618$dip)
 # shapiro.test(plots_618$median)
-# shapiro.test(plots_618$iqr) #normal
+shapiro.test(plots_618$iqr) #normal
 # shapiro.test(plots_618$skew)
 # shapiro.test(plots_618$kurt)
-# shapiro.test(plots_618$PlotCRR) #normal
+shapiro.test(plots_618$PlotCRR) #normal
 # shapiro.test(plots_618$rumple)
 # shapiro.test(plots_618$moran)
 # shapiro.test(plots_618$geary)
+
+shapiro.test(plots_618$`N %`)
+shapiro.test(plots_618$'P %')
+shapiro.test(plots_618$`K %`)
+shapiro.test(plots_618$`Mg %`)
+shapiro.test(plots_618$`Ca %`)
+shapiro.test(plots_618$`S %`)
+shapiro.test(plots_618$`Zn ppm`)
+shapiro.test(plots_618$`Mn ppm`)
+shapiro.test(plots_618$`Cu ppm`)
+shapiro.test(plots_618$`Fe ppm`)
+shapiro.test(plots_618$`B ppm`)
+shapiro.test(plots_618$`Al ppm`)
+shapiro.test(plots_618$`Na %`)
+
 # 
-# # NOTE the transformations below are not all natural log. Tukey transformation choses the best transformation method.
+# # NOTE the transformations below are not all natural log. Tukey transformation chooses the best transformation method to maximize Shapiro-Wilks W
 plots_618$crrmedian_ln <- transformTukey(plots_618$crrmedian)
 plots_618$crriqr_ln <- transformTukey(plots_618$crriqr) # still not normal
 plots_618$dip_ln <- transformTukey(plots_618$dip) # still not normal
@@ -315,6 +347,26 @@ plots_618$kurt_ln <- transformTukey(plots_618$kurt) # still not normal
 plots_618$moran_ln <- transformTukey(plots_618$moran)
 plots_618$geary_ln <- transformTukey(plots_618$geary)
 
+library(MVTests)
+mvnorm_test <- mvShapiro(plots_618@data[,36:48])
+summary(mvnorm_test)
+
+`N_ln` + `P_ln` + `K_ln`+`Mg_ln` +`Ca_ln` + `S_ln` + `Zn ppm_ln`+`Mn ppm_ln`+`Cu ppm_ln`+`Fe ppm_ln`+`B ppm_ln`+`Al ppm_ln`+`Na_ln`
+
+plots_618$`N_ln` <- transformTukey(plots_618$`N`)
+plots_618$`P_ln` <- transformTukey(plots_618$'P')
+plots_618$`K_ln` <- transformTukey(plots_618$`K`)
+plots_618$`Mg_ln` <- transformTukey(plots_618$`Mg`)
+plots_618$`Ca_ln` <- transformTukey(plots_618$`Ca`)
+plots_618$`S_ln` <- transformTukey(plots_618$`S`)
+plots_618$`Zn_ln` <- transformTukey(plots_618$`Zn`)
+plots_618$`Mn_ln` <- transformTukey(plots_618$`Mn`)
+plots_618$`Cu_ln` <- transformTukey(plots_618$`Cu`)
+plots_618$`Fe_ln` <- transformTukey(plots_618$`Fe`)
+plots_618$`B_ln` <- transformTukey(plots_618$`B`)
+plots_618$`Al_ln` <- transformTukey(plots_618$`Al`)
+plots_618$`Na_ln` <- transformTukey(plots_618$`Na`)
+
 plots_716$crrmedian_ln <- transformTukey(plots_716$crrmedian)
 plots_716$crriqr_ln <- transformTukey(plots_716$crriqr)
 plots_716$dip_ln <- transformTukey(plots_716$dip) # still not normal
@@ -323,6 +375,19 @@ plots_716$skew_ln <- transformTukey(plots_716$skew) # still not normal
 plots_716$kurt_ln <- transformTukey(plots_716$kurt) # still not normal
 plots_716$moran_ln <- transformTukey(plots_716$moran)
 plots_716$geary_ln <- transformTukey(plots_716$geary)
+plots_716$`N_ln` <- transformTukey(plots_716$`N`)
+plots_716$`P_ln` <- transformTukey(plots_716$'P')
+plots_716$`K_ln` <- transformTukey(plots_716$`K`)
+plots_716$`Mg_ln` <- transformTukey(plots_716$`Mg`)
+plots_716$`Ca_ln` <- transformTukey(plots_716$`Ca`)
+plots_716$`S_ln` <- transformTukey(plots_716$`S`)
+plots_716$`Zn_ln` <- transformTukey(plots_716$`Zn`)
+plots_716$`Mn_ln` <- transformTukey(plots_716$`Mn`)
+plots_716$`Cu_ln` <- transformTukey(plots_716$`Cu`)
+plots_716$`Fe_ln` <- transformTukey(plots_716$`Fe`)
+plots_716$`B_ln` <- transformTukey(plots_716$`B`)
+plots_716$`Al_ln` <- transformTukey(plots_716$`Al`)
+plots_716$`Na_ln` <- transformTukey(plots_716$`Na`)
 
 plots_814$crrmedian_ln <- transformTukey(plots_814$crrmedian)
 plots_814$crriqr_ln <- transformTukey(plots_814$crriqr)
@@ -332,6 +397,19 @@ plots_814$skew_ln <- transformTukey(plots_814$skew)
 plots_814$kurt_ln <- transformTukey(plots_814$kurt)
 plots_814$moran_ln <- transformTukey(plots_814$moran) # still not normal
 plots_814$geary_ln <- transformTukey(plots_814$geary)
+plots_814$`N_ln` <- transformTukey(plots_814$`N`)
+plots_814$`P_ln` <- transformTukey(plots_814$'P')
+plots_814$`K_ln` <- transformTukey(plots_814$`K`)
+plots_814$`Mg_ln` <- transformTukey(plots_814$`Mg`)
+plots_814$`Ca_ln` <- transformTukey(plots_814$`Ca`)
+plots_814$`S_ln` <- transformTukey(plots_814$`S`)
+plots_814$`Zn_ln` <- transformTukey(plots_814$`Zn`)
+plots_814$`Mn_ln` <- transformTukey(plots_814$`Mn`)
+plots_814$`Cu_ln` <- transformTukey(plots_814$`Cu`)
+plots_814$`Fe_ln` <- transformTukey(plots_814$`Fe`)
+plots_814$`B_ln` <- transformTukey(plots_814$`B`)
+plots_814$`Al_ln` <- transformTukey(plots_814$`Al`)
+plots_814$`Na_ln` <- transformTukey(plots_814$`Na`)
 
 
 
@@ -346,23 +424,23 @@ deficiency <- c("-K", "-N", "-P")
 toxicity <- c("+B 2 lb", "+B 4 lb", "+B 8 lb")
 
 dt_618 <- as.data.table(plots_618)
-dt_618$Trt_agg <- as.character(plots_618$Treatment)
-dt_618[Treatment %in% deficiency]$Trt_agg <- "deficiency"
-dt_618[Treatment %in% toxicity]$Trt_agg <- "toxicity"
+dt_618$Trt_agg <- as.character(dt_618$Treatment.x)
+dt_618[Treatment.x %in% deficiency]$Trt_agg <- "deficiency"
+dt_618[Treatment.x %in% toxicity]$Trt_agg <- "toxicity"
 dt_618$Trt_agg <- as.factor(dt_618$Trt_agg)
 plots_618@data <- dt_618
 
 dt_716 <- as.data.table(plots_716)
-dt_716$Trt_agg <- as.character(plots_716$Treatment)
-dt_716[Treatment %in% deficiency]$Trt_agg <- "deficiency"
-dt_716[Treatment %in% toxicity]$Trt_agg <- "toxicity"
+dt_716$Trt_agg <- as.character(dt_716$Treatment.x)
+dt_716[Treatment.x %in% deficiency]$Trt_agg <- "deficiency"
+dt_716[Treatment.x %in% toxicity]$Trt_agg <- "toxicity"
 dt_716$Trt_agg <- as.factor(dt_716$Trt_agg)
 plots_716@data <- dt_716
 
 dt_814 <- as.data.table(plots_814)
-dt_814$Trt_agg <- as.character(plots_814$Treatment)
-dt_814[Treatment %in% deficiency]$Trt_agg <- "deficiency"
-dt_814[Treatment %in% toxicity]$Trt_agg <- "toxicity"
+dt_814$Trt_agg <- as.character(dt_814$Treatment.x)
+dt_814[Treatment.x %in% deficiency]$Trt_agg <- "deficiency"
+dt_814[Treatment.x %in% toxicity]$Trt_agg <- "toxicity"
 dt_814$Trt_agg <- as.factor(dt_814$Trt_agg)
 plots_814@data <- dt_814
 
@@ -380,21 +458,24 @@ plots_814_df <- as.data.frame(plots_814)
 #                  histogram=TRUE,
 #                  pch=16)
 
-#normalize data
-norm_618 <- as.data.frame(scale(plots_618@data[,c(3, 5,6, 7, 10, 13, 14, 15, 17, 18)]))
-norm_618$Treatment <- plots_618@data$Treatment
-norm_618$Id <- plots_618@data$Id
-norm_618$Trt_agg <- plots_618@data$Trt_agg
+#standardize data
+std_618 <- as.data.frame(scale(plots_618@data[,c(6:35)]))
+std_618$Treatment <- plots_618@data$Treatment
+std_618$Id <- plots_618@data$Id
+std_618$Trt_agg <- plots_618@data$Trt_agg
+std_618$Treatment <- plots_618@data$Treatment.x
 
-norm_716 <- as.data.frame(scale(plots_716@data[,c(3, 5,6, 7, 10, 13, 14, 15, 17, 18)]))
-norm_716$Treatment <- plots_716$Treatment
-norm_716$Id <- plots_716$Id
-norm_716$Trt_agg <- plots_716$Trt_agg
+std_716 <- as.data.frame(scale(plots_716@data[,c(6:35)]))
+std_716$Treatment <- plots_716$Treatment
+std_716$Id <- plots_716$Id
+std_716$Trt_agg <- plots_716$Trt_agg
+std_716$Treatment <- plots_716@data$Treatment.x
 
-norm_814 <- as.data.frame(scale(plots_814@data[,c(3, 5,6, 7, 10, 13, 14, 15, 17, 18)]))
-norm_814$Treatment <- plots_814$Treatment
-norm_814$Id <- plots_814$Id
-norm_814$Trt_agg <- plots_814_df$Trt_agg
+std_814 <- as.data.frame(scale(plots_814@data[,c(6:35)]))
+std_814$Treatment <- plots_814$Treatment
+std_814$Id <- plots_814$Id
+std_814$Trt_agg <- plots_814$Trt_agg
+std_814$Treatment <- plots_814@data$Treatment.x
 
 ```
 
@@ -410,14 +491,13 @@ norm_814$Trt_agg <- plots_814_df$Trt_agg
 #     all trt classes: crrmedian_ln+crriqr_ln+median_ln+iqr+kurt_ln+geary_ln+dip_ln
 #     agg trt classes: crrmedian_ln+crriqr_ln+median_ln+iqr+skew_ln+moran_ln+geary_ln+dip_ln
 
-chart.Correlation(plots_618_df[,c(3, 5, 6, 7, 10,13, 14, 15, 17, 18, 19)],
+chart.Correlation(plots_618@data[,c(36:56)],
                  method="pearson",
                  histogram=TRUE,
                  pch=16)
 
 library(car)
-glm_618 <- glm(Trt_agg ~ crrmedian+median+kurt+rumple+moran+dip+crriqr, data = plots_618, 
-              family =binomial(link="logit"), na.action = na.fail)
+glm_618 <- glm(moran ~ crrmedian+median+kurt+rumple+moran+dip+crriqr, data = plots_618, na.action = na.fail)
 car::vif(mltnom_618)
 
 glm_716 <- glm(Trt_agg ~ crrmedian+median+kurt+rumple+moran+dip+crriqr, data = plots_716, 
@@ -431,8 +511,733 @@ vif(glm_814)
 ```
 
 ## Visual inspection of scatterplots. Colinearity between:
+``` {r manova}
+
+# MANOVA
+med_618 <- std_618$median_ln
+moran_618 <- std_618$moran_ln
+crrmed_618 <- std_618$crrmedian_ln
+skew_618 <- std_618$skew_ln
+kurt_618 <- std_618$kurt_ln
+rumple_618 <- std_618$rumple
+
+man_618 <- manova(cbind(med_618, moran_618, crrmed_618, skew_618, kurt_618, rumple_618)~Treatment, data=std_618)
+summary(man_618)
+summary.aov(man_618)
 
 
+med_716 <- std_716$median_ln
+moran_716 <- std_716$moran_ln
+crrmed_716 <- std_716$crrmedian_ln
+skew_716 <- std_716$skew_ln
+kurt_716 <- std_716$kurt_ln
+rumple_716 <- std_716$rumple
+
+man_716 <- manova(cbind(med_716, moran_716, crrmed_716, skew_716, kurt_716, rumple_716)~Treatment, data=std_716)
+summary(man_716)
+summary.aov(man_716)
+
+
+med_814 <- std_814$median_ln
+moran_814 <- std_814$moran_ln
+crrmed_814 <- std_814$crrmedian_ln
+skew_814 <- std_814$skew_ln
+kurt_814 <- std_814$kurt_ln
+rumple_814 <- std_814$rumple
+
+man_814 <- manova(cbind(med_814, moran_814, crrmed_814, skew_814, kurt_814, rumple_814)~Trt_agg, data=std_814)
+summary(man_814)
+summary.aov(man_814)
+
+```
+
+```{r nutrient-stats}
+# Try lm with nutrients as independent
+
+# All nutrients: 
+#all nutrients: `N` + `P` + `K`+`Mg` +`Ca` + `S` + `Zn`+`Mn`+`Cu`+`Fe`+`B`+`Al`+`Na`
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+
+null <- spautolm(median_ln ~ 1, data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+#null <- lm(BuAc ~ 1, data=norm_1cm, na.action=na.fail)
+r2 <- function(model){
+  r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+  r2 <- r.squaredLR(model, null = null)[1]
+  n <- model$fit[[5]]
+  p <- model$parameters
+  1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+# 618 OLS
+lm_618 <- lm(crrmedian ~ `N` + `P` + `K`+`Mg` +`Ca` + `S` +`Cu`+`Fe`+`B`+`Al`+`Na`, data = std_618, na.action = na.fail)
+summary(lm_618)
+qqnorm(lm_618$residuals)
+sd(lm_618$residuals)
+vif(lm_618)
+dredge(lm_618, trace = T)
+
+# 618 check for spatial autocorrelation
+std_618$ols_res <- lm_618$residuals
+# Weights matrix
+w <- knn2nb(knearneigh(coordinates(plots), k=8))
+moran.test(std_618$ols_res, nb2listw(w))
+
+#Apply SAR model
+sar_618 <- spautolm(crrmedian ~ `N` + `P` + `K`+`Mg` +`Ca` + `S` + `Cu` +`Fe`+`B`+`Al`+`Na`, data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+summary(sar_618)
+sar_resi <- sar_618$fit[[9]]
+std_618$sar_resi <- sar_resi
+moran.test(std_618$sar_resi, nb2listw(w))
+
+modsel_618 <- dredge(sar_618, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+tmp <- modsel_618[1]
+topmod_618 <- spautolm(median_ln ~ `N %_ln` + `P %_ln` + `K %_ln`+`Mg %_ln` +`Ca %_ln` + `Zn ppm_ln`, data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2_618 <- r2(topmod_1cm)
+adj_618 <- adj_r2(topmod_618)
+
+lm_716 <- lm(skew_ln ~ `N` + `P` + `K`+`Mg` +`Ca` + `S` + `Cu` +`Fe`+`B`+`Al`+`Na`, data = plots_716, na.action = na.fail)
+summary(lm_716)
+vif(lm_716)
+dredge(lm_716, trace = T)
+
+lm_814 <- lm(rumple ~ `N` + `P` + `K`+`Mg` +`Ca` + `S` + `Cu` +`Fe`+`B`+`Al`+`Na`, data = std_814, na.action = na.fail)
+summary(lm_814)
+vif(lm_814)
+dredge(lm_814, trace = T)
+
+# SAR model selection function
+sar_modsel <- function(dat){
+  w <- knn2nb(knearneigh(coordinates(plots_618), k=8))
+  variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+  sar <- spautolm(as.formula(
+  paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+  # Function for calculating r^2 in SAR model, null model will be same for each date
+   null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+  r2 <- function(model){
+  r.squaredLR(model, null = null)[1]
+  }
+
+  adj_r2 <- function(model){
+  r2 <- r.squaredLR(model, null = null)[1]
+  n <- model$fit[[5]]
+  p <- model$parameters
+  1-(1-r2)*((n - 1)/(n - p - 1))
+  }
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+modsel[1]
+}
+
+
+# Giving up on function...
+metric <- "median"
+w <- knn2nb(knearneigh(coordinates(plots_618), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+med_618 <- modsel[1]
+
+metric <- "crrmedian"
+w <- knn2nb(knearneigh(coordinates(plots_618), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+crrmed_618 <- modsel[1]
+
+
+metric <- "iqr"
+w <- knn2nb(knearneigh(coordinates(plots_618), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+iqr_618 <- modsel[1]
+
+metric <- "crriqr"
+w <- knn2nb(knearneigh(coordinates(plots_618), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+crriqr_618 <- modsel[1]
+
+metric <- "moran"
+w <- knn2nb(knearneigh(coordinates(plots_618), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+moran_618 <- modsel[1]
+
+metric <- "skew"
+w <- knn2nb(knearneigh(coordinates(plots_618), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+skew_618 <- modsel[1]
+
+metric <- "kurt"
+w <- knn2nb(knearneigh(coordinates(plots_618), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+kurt_618 <- modsel[1]
+
+metric <- "rumple"
+w <- knn2nb(knearneigh(coordinates(plots_618), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_618, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+rumple_618 <- modsel[1]
+
+
+
+metric <- "median"
+w <- knn2nb(knearneigh(coordinates(plots_716), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+med_716 <- modsel[1]
+
+metric <- "crrmedian"
+w <- knn2nb(knearneigh(coordinates(plots_716), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+crrmed_716 <- modsel[1]
+
+
+metric <- "iqr"
+w <- knn2nb(knearneigh(coordinates(plots_716), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+iqr_716 <- modsel[1]
+
+metric <- "crriqr"
+w <- knn2nb(knearneigh(coordinates(plots_716), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+crriqr_716 <- modsel[1]
+
+metric <- "moran"
+w <- knn2nb(knearneigh(coordinates(plots_716), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+moran_716 <- modsel[1]
+
+metric <- "skew"
+w <- knn2nb(knearneigh(coordinates(plots_716), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+skew_716 <- modsel[1]
+
+metric <- "kurt"
+w <- knn2nb(knearneigh(coordinates(plots_716), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+kurt_716 <- modsel[1]
+
+metric <- "rumple"
+w <- knn2nb(knearneigh(coordinates(plots_716), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_716, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+rumple_716 <- modsel[1]
+
+metric <- "median"
+w <- knn2nb(knearneigh(coordinates(plots_814), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+med_814 <- modsel[1]
+
+metric <- "crrmedian"
+w <- knn2nb(knearneigh(coordinates(plots_814), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+crrmed_814 <- modsel[1]
+
+
+metric <- "iqr"
+w <- knn2nb(knearneigh(coordinates(plots_814), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+iqr_814 <- modsel[1]
+
+metric <- "crriqr"
+w <- knn2nb(knearneigh(coordinates(plots_814), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+crriqr_814 <- modsel[1]
+
+metric <- "moran"
+w <- knn2nb(knearneigh(coordinates(plots_814), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+moran_814 <- modsel[1]
+
+metric <- "skew"
+w <- knn2nb(knearneigh(coordinates(plots_814), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+skew_814 <- modsel[1]
+
+metric <- "kurt"
+w <- knn2nb(knearneigh(coordinates(plots_814), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+kurt_814 <- modsel[1]
+
+metric <- "rumple"
+w <- knn2nb(knearneigh(coordinates(plots_814), k=8))
+variables <- c('`N`', '`P`','`K`','`Mg`','`Ca`', '`S`', '`Cu`','`Fe`','`B`','`Al`','`Na`')
+sar <- spautolm(as.formula(
+paste(metric, 
+        paste(variables, collapse = " + "), 
+        sep = " ~ ")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+
+# Function for calculating r^2 in SAR model, null model will be same for each date
+null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = std_814, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
+r2 <- function(model){
+r.squaredLR(model, null = null)[1]
+}
+
+adj_r2 <- function(model){
+r2 <- r.squaredLR(model, null = null)[1]
+n <- model$fit[[5]]
+p <- model$parameters
+1-(1-r2)*((n - 1)/(n - p - 1))
+}
+
+modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
+rumple_814 <- modsel[1]
+
+
+```
+
+
+```{r nutrients-rf}
+
+#all nutrients: `N` + `P` + `K`+`Mg` +`Ca` + `S` + `Zn`+`Mn`+`Cu`+`Fe`+`B`+`Al`+`Na`
+
+set.seed(42)
+train_data_indices <- rep(FALSE, nrow(std_716))
+train_data_indices[sample(1:nrow(std_618), round(0.7 * nrow(std_618)))] <- TRUE # randomly select 70% of the data for training
+rf_regression<- randomForest(crrmedian ~ `N` + `P` + `K`+`Mg` +`Ca` + `Zn`+`Cu`+`Fe`+`B`+`Al`+`Na`, data = std_618[train_data_indices, ], importance=T)
+rf_regression
+varImpPlot(rf_regression)
+pred_struc <- predict(rf_regression, std_618[!train_data_indices,]) # predict the rings
+#table(pred_struc, std_618$median[!train_data_indices])
+plot(std_618$median[!train_data_indices], pred_struc, xlab="Observed", ylab="Predicted")
+
+
+```
 
 ```{r stats-618}
 
@@ -549,7 +1354,7 @@ vars_618 <- as.data.frame(vars)
 vars_618$mean <- mean_all
 vars_618$sd <- sd_all
 
-write.csv(vars_618, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/vars_618.csv")
+#write.csv(vars_618, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/vars_618.csv")
 
 levels <- topmod_618$lev[-1]
 #df_all <- data.frame(var=character(), coefs=list(), SE=double(), Wald=double(), p=double(), exp=double())
@@ -633,7 +1438,7 @@ results_618 <- rbind(results_0_618, results_def_618, results_tox_618)
 # mlogit_results_618 <- mlogit_results(topmod_618)
 
 
-write.csv(results_618, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/results_618.csv")
+#write.csv(results_618, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/results_618.csv")
 
 ```
 
@@ -654,7 +1459,7 @@ vars_716 <- as.data.frame(vars)
 vars_716$mean <- mean_all
 vars_716$sd <- sd_all
 
-write.csv(vars_716, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/vars_716.csv")
+#write.csv(vars_716, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/vars_716.csv")
 
 levels <- topmod_716$lev[-1]
 #df_all <- data.frame(var=character(), coefs=list(), SE=double(), Wald=double(), p=double(), exp=double())
@@ -709,7 +1514,7 @@ results_def_716$wald <- Wald[[2]]
 
 results_716 <- rbind(results_0_716, results_def_716, results_tox_716)
 
-write.csv(results_716, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/results_716.csv")
+#write.csv(results_716, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/results_716.csv")
 
 ```
 
@@ -730,7 +1535,7 @@ vars_814 <- as.data.frame(vars)
 vars_814$mean <- mean_all
 vars_814$sd <- sd_all
 
-write.csv(vars_814, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/vars_814.csv")
+#write.csv(vars_814, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/vars_814.csv")
 
 levels <- topmod_814$lev[-1]
 #df_all <- data.frame(var=character(), coefs=list(), SE=double(), Wald=double(), p=double(), exp=double())
@@ -786,7 +1591,7 @@ results_def_814$wald <- Wald[[2]]
 
 results_814 <- rbind(results_0_814, results_def_814, results_tox_814)
 
-write.csv(results_814, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/results_814.csv")
+#write.csv(results_814, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/results_814.csv")
 
 ```
 
