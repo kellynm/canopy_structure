@@ -21,6 +21,7 @@ library(graphics)
 library(lme4)
 library(MuMIn)
 library(spdep)
+library(tibble)
 #Load raster data for all dates
 #setwd("/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/LkWheeler_Sorghum/LkWheeler_Fusarium_Sorghum")
 setwd("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019")
@@ -385,7 +386,6 @@ merged_local_moran_plots_717 <- do.call(raster::merge, local_moran_plots_717)
 #writeRaster(merged_local_moran_plots_717, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/layers/moran/local_moran_plots_717.tif", format="GTiff", overwrite = T)
 
 # ------------------------------------- Aggregate plots to match nutrient observations --------------------------------------
-
 agg_619 <- aggregate(plots_619@data[,23:67], by = list(plots_619$join_id), FUN = mean)
 agg_619 <- agg_619[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,40,41,42,44,45,46)]
 names(agg_619)[15] <- "spad"
@@ -397,98 +397,6 @@ names(agg_703)[15] <- "spad"
 agg_717 <- aggregate(plots_717@data[,23:67], by = list(plots_717$join_id), FUN = mean)
 agg_717 <- agg_717[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,40,41,42,44,45,46)]
 names(agg_717)[15] <- "spad"
-
-# ------------------------------------Plot variables ------------------------------------------
-library(ggpubr)
-
-pairs(agg_619[,27:39], 
-      main="Simple Scatterplot Matrix")
-
-cor(agg_619[,2:40])
-
-#plot(plots_619$mean, plots_619$BuAc)
-plot(plots_619$N, plots_619$K, xlab = "Median Height (m)", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_median <- lm(BuAc ~ median, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_median)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-2.1, 1.6))
-shapiro.test(plots_1cm$BuAc)
-
-cor.test(plots_619$N, plots_619$K)
-ggscatter(plots_1cm@data, x = "median", y = "BuAc", 
-          add = "reg.line", conf.int = TRUE, 
-          cor.coef = TRUE, cor.method = "pearson",
-          xlab = "Median Height (m)", ylab = "Yield (bu/ac)")
-
-#plot(plots_619$sum, plots_619$BuAc)
-plot(plots_619$iqr, plots_619$BuAc, xlab = "Interquartile Range (m)", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_iqr <- lm(BuAc ~ iqr, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_iqr)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-2.1, 1.6))
-
-plot(plots_619$rumple, plots_619$BuAc, xlab = "Rumple Index", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_rumple <- lm(BuAc ~ rumple, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_rumple)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-2.1, 1.6))
-
-plot(plots_619$skew, plots_619$BuAc, xlab = "Skewness", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_skew <- lm(BuAc ~ skew, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_skew)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-2.1, 1.6))
-
-plot(plots_619$kurt, plots_619$BuAc, xlab = "Kurtosis", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_kurt <- lm(BuAc ~ kurt, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_kurt)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-2.1, 1.6))
-
-#plot(plots_619$sd, plots_619$BuAc)
-plot(plots_619$crrmean, plots_619$BuAc, xlab = "CRR Mean", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_crrmean <- lm(BuAc ~ crrmean, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_crrmean)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-2.1, 1.6))
-
-plot(plots_619$crrsd, plots_619$BuAc, xlab = "CRR Standard Deviation", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_crrsd <- lm(BuAc ~ crrsd, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_crrsd)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-3.4, 1.6))
-
-#plot(plots_619$PlotCRR, plots_619$BuAc)
-# plot(plots_619$moran, plots_619$BuAc)
-# lm_moran <- lm(BuAc ~ moran, data = plots_1cm)
-# text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_moran)$r.squared, 2))), 
-#      cex = 2, col = 2, adj = c(-2.1, 1.6))
-
-plot(plots_1cm$geary, plots_619$BuAc, xlab = "Geary's C", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_geary <- lm(BuAc ~ geary, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_geary)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-3.4, 1.6))
-
-#tmp <- lm(BuAc~median, data=plots_619)
-#summary(tmp)
-#plot(plots_619$sill, plots_619$BuAc)
-#plot(plots_619$range, plots_619$BuAc)
-#plot(plots_619$Trt, plots_619$BuAc)
-plot(plots_619$AUDPC, plots_619$BuAc, xlab = "AUDPC", ylab = "Yield (bu/ac)")
-lm_audpc <- lm(BuAc ~ AUDPC, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_audpc)$r.squared, 2))), 
-     cex = 1.5, col = 2, adj = c(-6.7, 1.4))
-#plot(plots_619$watersum, plots_619$BuAc)
-#plot(plots_619$watersd, plots_619$BuAc)
-
-par(mfrow=c(1,1))
-
-# Plot histogram distribution of each variable
-histogram(plots_619$N, nint=52)
-histogram(plots_619$P, nint=52)
-histogram(plots_619$K, nint=52)
-histogram(plots_619$Mg, nint=52)
-histogram(plots_619$Ca, nint=52)
-histogram(plots_619$S, nint=52)
-histogram(plots_619$Zn, nint=52)
-histogram(plots_619$Mn, nint=52)
-histogram(plots_619$Cu, nint=30)
-histogram(plots_619$Fe, nint=30)
-histogram(plots_619$B, nint=30)
-histogram(plots_619$Al, nint=30)
 
 # -------------------------------------------------- Normal transformation-------------------------------------------
 
@@ -585,17 +493,157 @@ agg_717$tgi_iqr_ln <- transformTukey(agg_717$tgi_iqr)
 
 # Check for normal distribution of dependent variables
 shapiro.test(agg_619$N)
+agg_619$N_ln <- transformTukey(agg_619$N)
+shapiro.test(agg_619$P)
+shapiro.test(agg_619$K)
+shapiro.test(agg_619$Mg)
+shapiro.test(agg_619$Ca)
+shapiro.test(agg_619$S)
+shapiro.test(agg_619$Zn)
+shapiro.test(agg_619$B)
+agg_619$B_ln <- transformTukey(agg_619$B)
 
+shapiro.test(agg_703$N)
+agg_703$N_ln <- transformTukey(agg_703$N)
+shapiro.test(agg_703$P)
+shapiro.test(agg_703$K)
+shapiro.test(agg_703$Mg)
+shapiro.test(agg_703$Ca)
+shapiro.test(agg_703$S)
+shapiro.test(agg_703$Zn)
+shapiro.test(agg_703$B)
+agg_703$B_ln <- transformTukey(agg_703$B)
+
+shapiro.test(agg_717$N)
+agg_717$N_ln <- transformTukey(agg_717$N)
+shapiro.test(agg_717$P)
+shapiro.test(agg_717$K)
+shapiro.test(agg_717$Mg)
+shapiro.test(agg_717$Ca)
+shapiro.test(agg_717$S)
+shapiro.test(agg_717$Zn)
+shapiro.test(agg_717$B)
+agg_717$B_ln <- transformTukey(agg_717$B)
+shapiro.test(agg_717$B_ln)
+
+# ------------------------------------Plot variables ------------------------------------------
+library(ggpubr)
+
+pairs(agg_619[,c(2,21,22,43,27,42,32,33,35,36,38,39,40)], 
+      main="Simple Scatterplot Matrix")
+
+cor(agg_619[,2:40])
+
+#plot(plots_619$mean, plots_619$BuAc)
+plot(plots_619$N, plots_619$K, xlab = "Median Height (m)", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+lm_median <- lm(BuAc ~ median, data = plots_1cm)
+text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_median)$r.squared, 2))), 
+     cex = 2, col = 2, adj = c(-2.1, 1.6))
+shapiro.test(plots_1cm$BuAc)
+
+cor.test(plots_619$N, plots_619$K)
+ggscatter(plots_1cm@data, x = "median", y = "BuAc", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Median Height (m)", ylab = "Yield (bu/ac)")
+
+#plot(plots_619$sum, plots_619$BuAc)
+plot(plots_619$iqr, plots_619$BuAc, xlab = "Interquartile Range (m)", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+lm_iqr <- lm(BuAc ~ iqr, data = plots_1cm)
+text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_iqr)$r.squared, 2))), 
+     cex = 2, col = 2, adj = c(-2.1, 1.6))
+
+plot(plots_619$rumple, plots_619$BuAc, xlab = "Rumple Index", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+lm_rumple <- lm(BuAc ~ rumple, data = plots_1cm)
+text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_rumple)$r.squared, 2))), 
+     cex = 2, col = 2, adj = c(-2.1, 1.6))
+
+plot(plots_619$skew, plots_619$BuAc, xlab = "Skewness", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+lm_skew <- lm(BuAc ~ skew, data = plots_1cm)
+text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_skew)$r.squared, 2))), 
+     cex = 2, col = 2, adj = c(-2.1, 1.6))
+
+plot(plots_619$kurt, plots_619$BuAc, xlab = "Kurtosis", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+lm_kurt <- lm(BuAc ~ kurt, data = plots_1cm)
+text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_kurt)$r.squared, 2))), 
+     cex = 2, col = 2, adj = c(-2.1, 1.6))
+
+#plot(plots_619$sd, plots_619$BuAc)
+plot(plots_619$crrmean, plots_619$BuAc, xlab = "CRR Mean", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+lm_crrmean <- lm(BuAc ~ crrmean, data = plots_1cm)
+text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_crrmean)$r.squared, 2))), 
+     cex = 2, col = 2, adj = c(-2.1, 1.6))
+
+plot(plots_619$crrsd, plots_619$BuAc, xlab = "CRR Standard Deviation", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+lm_crrsd <- lm(BuAc ~ crrsd, data = plots_1cm)
+text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_crrsd)$r.squared, 2))), 
+     cex = 2, col = 2, adj = c(-3.4, 1.6))
+
+#plot(plots_619$PlotCRR, plots_619$BuAc)
+# plot(plots_619$moran, plots_619$BuAc)
+# lm_moran <- lm(BuAc ~ moran, data = plots_1cm)
+# text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_moran)$r.squared, 2))), 
+#      cex = 2, col = 2, adj = c(-2.1, 1.6))
+
+plot(plots_1cm$geary, plots_619$BuAc, xlab = "Geary's C", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+lm_geary <- lm(BuAc ~ geary, data = plots_1cm)
+text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_geary)$r.squared, 2))), 
+     cex = 2, col = 2, adj = c(-3.4, 1.6))
+
+#tmp <- lm(BuAc~median, data=plots_619)
+#summary(tmp)
+#plot(plots_619$sill, plots_619$BuAc)
+#plot(plots_619$range, plots_619$BuAc)
+#plot(plots_619$Trt, plots_619$BuAc)
+plot(plots_619$AUDPC, plots_619$BuAc, xlab = "AUDPC", ylab = "Yield (bu/ac)")
+lm_audpc <- lm(BuAc ~ AUDPC, data = plots_1cm)
+text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_audpc)$r.squared, 2))), 
+     cex = 1.5, col = 2, adj = c(-6.7, 1.4))
+#plot(plots_619$watersum, plots_619$BuAc)
+#plot(plots_619$watersd, plots_619$BuAc)
+
+par(mfrow=c(1,1))
+
+# Plot histogram distribution of each variable
+histogram(plots_619$N, nint=52)
+histogram(plots_619$P, nint=52)
+histogram(plots_619$K, nint=52)
+histogram(plots_619$Mg, nint=52)
+histogram(plots_619$Ca, nint=52)
+histogram(plots_619$S, nint=52)
+histogram(plots_619$Zn, nint=52)
+histogram(plots_619$Mn, nint=52)
+histogram(plots_619$Cu, nint=30)
+histogram(plots_619$Fe, nint=30)
+histogram(plots_619$B, nint=30)
+histogram(plots_619$Al, nint=30)
 
 
 # --------------------------------------- Stats data prep --------------------------------------------------------------------------------
+grouped_soils <- function(x)
+{
+  paste(as.vector(sort(plots_619$soil[plots_619$join_id == x]))[1],as.vector(sort(plots_619$soil[plots_619$join_id == x]))[2],as.vector(sort(plots_619$soil[plots_619$join_id == x]))[3], sep = "_")
+  
+}
+
+groups <- unique(plots_619$join_id)
+soils <- sapply(groups, grouped_soils)
+groups <- as.data.frame(groups)
+groups$soils <- as.factor(soils)
+
+agg_619 <- merge(agg_619, groups, by.x="Group.1", by.y="groups")
 agg_619$treatment <- tstrsplit(agg_619$Group.1, "_")[[2]]
 agg_619$fert <- tstrsplit(agg_619$Group.1, "_")[[1]]
+agg_703 <- merge(agg_703, groups, by.x="Group.1", by.y="groups")
 agg_703$treatment <- tstrsplit(agg_703$Group.1, "_")[[2]]
 agg_703$fert <- tstrsplit(agg_703$Group.1, "_")[[1]]
+agg_717 <- merge(agg_717, groups, by.x="Group.1", by.y="groups")
 agg_717$treatment <- tstrsplit(agg_717$Group.1, "_")[[2]]
 agg_717$fert <- tstrsplit(agg_717$Group.1, "_")[[1]]
 
+write.csv(agg_619, "results/data_619.csv")
+write.csv(agg_703, "results/data_703.csv")
+write.csv(agg_717, "results/data_717.csv")
 
 normalize <- function(x)
 {
@@ -604,21 +652,24 @@ normalize <- function(x)
 
 
 #minmax normalization of data
-norm_619 <- as.data.frame(normalize(agg_619[,2:46]))
+norm_619 <- as.data.frame(normalize(agg_619[,2:48]))
 norm_619$Id <- agg_619$Group.1
 norm_619$treatment <- agg_619$treatment
 norm_619$fert <- agg_619$fert
+norm_619$soils <- agg_619$soils
+norm_619 <- dummy_cols(norm_619, select_columns = "soils")
 
-norm_703 <- as.data.frame(normalize(agg_703[,2:49]))
+norm_703 <- as.data.frame(normalize(agg_703[,2:51]))
 norm_703$Id <- agg_703$Group.1
 norm_703$treatment <- agg_703$treatment
 norm_703$fert <- agg_703$fert
+norm_703$soils <- agg_703$soils
 
-norm_717 <- as.data.frame(normalize(agg_717[,2:45]))
+norm_717 <- as.data.frame(normalize(agg_717[,2:47]))
 norm_717$Id <- agg_717$Group.1
 norm_717$treatment <- agg_717$treatment
 norm_717$fert <- agg_717$fert
-
+norm_717$soils <- agg_717$soils
 
 # ---------------------------------------- MANOVA ------------------------------------------------------
 med_619 <- norm_619$median
@@ -659,11 +710,117 @@ summary(man_717)
 summary.aov(man_717)
 
 #---------------------------------------- LM structural only (partial mask) ------------------------------------------
+lmp <- function (modelobject) {
+  if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
+  f <- summary(modelobject)$fstatistic
+  p <- pf(f[1],f[2],f[3],lower.tail=F)
+  attributes(p) <- NULL
+  return(p)
+}
 
-lm_N_619 <- lm(N ~ crrmedian+crriqr_ln+kurt+rumple+moran+geary+watersum_ln, data = norm_619, na.action=na.fail)
+
+vif_func<-function(in_frame,thresh=10,trace=T,...){
+  
+  library(fmsb)
+  
+  if(any(!'data.frame' %in% class(in_frame))) in_frame<-data.frame(in_frame)
+  
+  #get initial vif value for all comparisons of variables
+  vif_init<-NULL
+  var_names <- names(in_frame)
+  for(val in var_names){
+    regressors <- var_names[-which(var_names == val)]
+    form <- paste(regressors, collapse = '+')
+    form_in <- formula(paste(val, '~', form))
+    vif_init<-rbind(vif_init, c(val, VIF(lm(form_in, data = in_frame, ...))))
+  }
+  vif_max<-max(as.numeric(vif_init[,2]), na.rm = TRUE)
+  
+  if(vif_max < thresh){
+    if(trace==T){ #print output of each iteration
+      prmatrix(vif_init,collab=c('var','vif'),rowlab=rep('',nrow(vif_init)),quote=F)
+      cat('\n')
+      cat(paste('All variables have VIF < ', thresh,', max VIF ',round(vif_max,2), sep=''),'\n\n')
+    }
+    return(var_names)
+  }
+  else{
+    
+    in_dat<-in_frame
+    
+    #backwards selection of explanatory variables, stops when all VIF values are below 'thresh'
+    while(vif_max >= thresh){
+      
+      vif_vals<-NULL
+      var_names <- names(in_dat)
+      
+      for(val in var_names){
+        regressors <- var_names[-which(var_names == val)]
+        form <- paste(regressors, collapse = '+')
+        form_in <- formula(paste(val, '~', form))
+        vif_add<-VIF(lm(form_in, data = in_dat, ...))
+        vif_vals<-rbind(vif_vals,c(val,vif_add))
+      }
+      max_row<-which(vif_vals[,2] == max(as.numeric(vif_vals[,2]), na.rm = TRUE))[1]
+      
+      vif_max<-as.numeric(vif_vals[max_row,2])
+      
+      if(vif_max<thresh) break
+      
+      if(trace==T){ #print output of each iteration
+        prmatrix(vif_vals,collab=c('var','vif'),rowlab=rep('',nrow(vif_vals)),quote=F)
+        cat('\n')
+        cat('removed: ',vif_vals[max_row,1],vif_max,'\n\n')
+        flush.console()
+      }
+      
+      in_dat<-in_dat[,!names(in_dat) %in% vif_vals[max_row,1]]
+      
+    }
+    
+    return(names(in_dat))
+    
+  }
+  
+}
+
+xvar_619 <- agg_619[,16:40]
+xvar_703 <- agg_703[,16:40]
+xvar_717 <- agg_717[,16:40]
+
+xkeep_619 <- vif_func(xvar_619, 4, F)
+xkeep_703 <- vif_func(xvar_703, 4, F)
+xkeep_717 <- vif_func(xvar_717, 4, F)
+
+
+
+yvar <- c("N","P","K","B","Ca","Mg","S","Zn")
+
+lm_spec_struc <- function(y, xkeep, data){
+  xvars <- paste(xkeep,collapse='+')
+  eq<-as.formula(paste(y, xvars, sep="~"))
+  mod1<-lm(eq,data=data, na.action=na.fail)
+  modsel <- dredge(mod1)
+  topmod <- get.models(modsel, subset = 1)[[1]]
+  res <- as.data.frame(modsel[1])
+  res$adj_r2 <- summary(topmod)$adj.r.squared
+  res$yvar <- y
+  res
+}
+
+spec_struc_619 <- lapply(yvar, lm_spec_struc, xkeep_619, norm_619)
+spec_struc_619 <- do.call(rbind, lapply(spec_struc_619, data.frame))
+
+spec_struc_703 <- lapply(yvar, lm_spec_struc, xkeep_703, norm_703)
+spec_struc_703 <- do.call(rbind, lapply(spec_struc_703, data.frame))
+
+spec_struc_717 <- lapply(yvar, lm_spec_struc, xkeep_717, norm_717)
+spec_struc_717 <- do.call(rbind, lapply(spec_struc_717, data.frame))
+
+lm_N_619 <- lm(N ~ mean+median+sd+iqr+crrmean+crrmedian+crrsd+crriqr+skew+kurt+geary+moran+rumple+watersum, data = norm_619, na.action=na.fail)
 vif(lm_N_619)
-modsel_N_619 <- dredge(lm_N_619)
-topmod_N_619 <- lm(N ~ crrmedian+moran+kurt, data = norm_619,na.action=na.fail)
+modsel_N_619 <- dredge(lm_N_619, extra="adjR^2")
+topmod_N_619 <- lm(N ~ crrmedian+kurt+moran+geary+watersum, data = norm_616, na.action=na.fail)
 vif(topmod_N_619)
 summary(topmod_N_619)
 N_619_pred <- predict(topmod_N_619)
@@ -671,45 +828,45 @@ N_619_res <- resid(topmod_N_619)
 n_619_table <- cbind(norm_619$N, N_619_pred, N_619_res)
 head(n_619_table)
 
-lm_P_619 <- lm(P ~ crrmedian+crriqr_ln+kurt+rumple+moran+geary+watersum_ln, data = norm_619, na.action=na.fail)
+lm_P_619 <- lm(P ~ crrmedian+crriqr+kurt+rumple+moran+geary+watersum, data = norm_619[-c(5,6,7),], na.action=na.fail)
 summary(lm_P_619)
 vif(lm_P_619)
 modsel_P_619 <- dredge(lm_P_619)
-topmod_P_619 <- lm(P ~ crrmedian+geary+watersum_ln, data = norm_619,na.action=na.fail)
+topmod_P_619 <- lm(P ~ crrmedian+geary+watersum, data = norm_619,na.action=na.fail)
 summary(topmod_P_619)
 
-lm_K_619 <- lm(K ~ crrmedian+crriqr_ln+kurt+rumple+moran+geary+watersum_ln, data = norm_619, na.action=na.fail)
+lm_K_619 <- lm(K ~ crrmedian+crriqr+kurt+rumple+moran+geary+watersum, data = norm_619, na.action=na.fail)
 summary(lm_K_619)
 modsel_K_619 <- dredge(lm_K_619)
-topmod_K_619 <- lm(K ~ crrmedian+watersum_ln, data = norm_619,na.action=na.fail)
+topmod_K_619 <- lm(K ~ crrmedian+watersum, data = norm_619,na.action=na.fail)
 summary(topmod_K_619)
 
-lm_Ca_619 <- lm(Ca ~crrmedian+crriqr_ln+kurt+rumple+moran+geary+watersum_ln, data = norm_619, na.action=na.fail)
+lm_Ca_619 <- lm(Ca ~crrmedian+crriqr+kurt+rumple+moran+geary+watersum, data = norm_619, na.action=na.fail)
 summary(lm_Ca_619)
 modsel_Ca_619 <- dredge(lm_Ca_619)
-topmod_Ca_619 <- lm(Ca ~ watersum_ln+moran, data = norm_619,na.action=na.fail)
+topmod_Ca_619 <- lm(Ca ~ crriqr+moran, data = norm_619,na.action=na.fail)
 summary(topmod_Ca_619)
 
-lm_S_619 <- lm(S ~ crrmedian+crriqr_ln+kurt+rumple+moran+geary+watersum_ln, data = norm_619, na.action=na.fail)
+lm_S_619 <- lm(S ~ crrmedian+crriqr+kurt+rumple+moran+geary+watersum, data = norm_619, na.action=na.fail)
 summary(lm_S_619)
 modsel_S_619 <- dredge(lm_S_619)
 topmod_S_619 <- lm(S ~ crrmedian, data = norm_619,na.action=na.fail)
 summary(topmod_S_619)
 
-lm_B_619 <- lm(B ~ crrmedian+crriqr_ln+kurt+rumple+moran+geary+watersum_ln, data = norm_619, na.action=na.fail)
+lm_B_619 <- lm(B ~ crrmedian+crriqr+kurt+rumple+moran+geary+watersum, data = norm_619, na.action=na.fail)
 summary(lm_B_619)
 modsel_B_619 <- dredge(lm_B_619)
 topmod_B_619 <- lm(B ~ geary+moran, data = norm_619,na.action=na.fail)
 vif(topmod_B_619)
 summary(topmod_B_619)
 
-lm_Zn_619 <- lm(Zn ~ crrmedian+crriqr_ln+kurt+rumple+moran+geary+watersum_ln, data = norm_619, na.action=na.fail)
+lm_Zn_619 <- lm(Zn ~ crrmedian+crriqr+kurt+rumple+moran+geary+watersum, data = norm_619, na.action=na.fail)
 summary(lm_Zn_619)
 modsel_Zn_619 <- dredge(lm_Zn_619)
 topmod_Zn_619 <- lm(Zn ~ crrmedian, data = norm_619,na.action=na.fail)
 summary(topmod_Zn_619)
 
-lm_Mg_619 <- lm(Mg ~  crrmedian+crriqr_ln+kurt+rumple+moran+geary+watersum_ln, data = norm_619, na.action=na.fail)
+lm_Mg_619 <- lm(Mg ~  crrmedian+crriqr+kurt+rumple+moran+geary+watersum, data = norm_619, na.action=na.fail)
 summary(lm_Mg_619)
 modsel_Mg_619 <- dredge(lm_Mg_619)
 topmod_Mg_619 <- lm(Mg ~ crrmedian+kurt+moran, data = norm_619,na.action=na.fail)
@@ -762,59 +919,59 @@ write.csv(res_619, "results/res_struc_partialmask_619.csv")
 
 # --------------------------------------------- All variables ---------------------------------------------------------
 
-mean+median+sd+iqr+crrmean+crrmedian+crrsd+crriqr+skew+kurt+geary+moran+watersum+tgi_mean+tgi_median+tgi_sd+tgi_iqr+varInd_mean+varInd_median+varInd_sd+varInd_iqr
+mean+median+sd+iqr+crrmean+crrmedian+crrsd+crriqr+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_median+tgi_sd+tgi_iqr+varInd_mean+varInd_median+varInd_sd+varInd_iqr
 
 #------------------------------------------- LM with spectral+structural --------------------------------------------------------
-lm_N_619 <- lm(N ~ crriqr_ln+crrmedian+kurt+rumple+moran+geary+watersum_ln+tgi_mean_ln+tgi_iqr, data = norm_619, na.action=na.fail)
+lm_N_619 <- lm(N ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = agg_619, na.action=na.fail)
 vif(lm_N_619)
 modsel_N_619 <- dredge(lm_N_619)
-topmod_N_619 <- lm(N ~ geary+kurt+rumple+tgi_median_ln+watersum_ln, data = norm_619,na.action=na.fail)
+topmod_N_619 <- lm(N ~ kurt+tgi_iqr+tgi_mean+watersum, data = norm_619,na.action=na.fail)
 summary(topmod_N_619)
 N_619_pred <- predict(topmod_N_619)
 N_619_res <- resid(topmod_N_619)
 n_619_table <- cbind(norm_619$N, N_619_pred, N_619_res)
 head(n_619_table)
 
-lm_P_619 <- lm(P ~ crriqr_ln+crrmedian+kurt+rumple+moran+geary+watersum_ln+tgi_median_ln+tgi_iqr, data = norm_619, na.action=na.fail)
+lm_P_619 <- lm(P ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = norm_619, na.action=na.fail)
 summary(lm_P_619)
 modsel_P_619 <- dredge(lm_P_619)
-topmod_P_619 <- lm(P ~ geary+tgi_iqr+watersum_ln, data = norm_619,na.action=na.fail)
+topmod_P_619 <- lm(P ~ geary+tgi_iqr+watersum, data = norm_619,na.action=na.fail)
 summary(topmod_P_619)
 
-lm_K_619 <- lm(K ~ crriqr_ln+crrmedian+kurt+rumple+moran+geary+watersum_ln+tgi_median_ln+tgi_iqr, data = norm_619, na.action=na.fail)
+lm_K_619 <- lm(K ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = norm_619, na.action=na.fail)
 summary(lm_K_619)
 modsel_K_619 <- dredge(lm_K_619)
-topmod_K_619 <- lm(K ~ tgi_median_ln+watersum_ln, data = norm_619,na.action=na.fail)
+topmod_K_619 <- lm(K ~ tgi_median+watersum, data = norm_619,na.action=na.fail)
 summary(topmod_K_619)
 
-lm_Ca_619 <- lm(Ca ~ crriqr_ln+crrmedian+kurt+rumple+moran+geary+watersum_ln+tgi_median_ln+tgi_iqr, data = norm_619, na.action=na.fail)
+lm_Ca_619 <- lm(Ca ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = norm_619, na.action=na.fail)
 summary(lm_Ca_619)
 modsel_Ca_619 <- dredge(lm_Ca_619)
-topmod_Ca_619 <- lm(Ca ~ moran+watersum_ln, data = norm_619,na.action=na.fail)
+topmod_Ca_619 <- lm(Ca ~ moran+crriqr, data = norm_619,na.action=na.fail)
 summary(topmod_Ca_619)
 
-lm_S_619 <- lm(S ~ crriqr_ln+skew+kurt+rumple+moran+geary+watersum_ln+tgi_median_ln+tgi_iqr, data = norm_619, na.action=na.fail)
+lm_S_619 <- lm(S ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = norm_619, na.action=na.fail)
 summary(lm_S_619)
 modsel_S_619 <- dredge(lm_S_619)
 topmod_S_619 <- lm(S ~ geary+moran+tgi_iqr, data = norm_619,na.action=na.fail)
 summary(topmod_S_619)
 
-lm_B_619 <- lm(B ~ crriqr_ln+skew+kurt+rumple+moran+geary+watersum_ln+tgi_median_ln+tgi_iqr, data = norm_619, na.action=na.fail)
+lm_B_619 <- lm(B ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = norm_619, na.action=na.fail)
 summary(lm_B_619)
 modsel_B_619 <- dredge(lm_B_619)
 topmod_B_619 <- lm(B ~ geary+moran, data = norm_619,na.action=na.fail)
 summary(topmod_B_619)
 
-lm_Zn_619 <- lm(Zn ~ crriqr_ln+skew+kurt+rumple+moran+geary+watersum_ln+tgi_median_ln+tgi_iqr, data = norm_619, na.action=na.fail)
+lm_Zn_619 <- lm(Zn ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = norm_619, na.action=na.fail)
 summary(lm_Zn_619)
 modsel_Zn_619 <- dredge(lm_Zn_619)
-topmod_Zn_619 <- lm(Zn ~ rumple+tgi_iqr, data = norm_619,na.action=na.fail)
+topmod_Zn_619 <- lm(Zn ~ rumple+tgi_median, data = norm_619,na.action=na.fail)
 summary(topmod_Zn_619)
 
-lm_Mg_619 <- lm(Mg ~ crriqr_ln+skew+kurt+rumple+moran+geary+watersum_ln+tgi_median_ln+tgi_iqr, data = norm_619, na.action=na.fail)
+lm_Mg_619 <- lm(Mg ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = norm_619, na.action=na.fail)
 summary(lm_Mg_619)
 modsel_Mg_619 <- dredge(lm_Mg_619)
-topmod_Mg_619 <- lm(Mg ~ crriqr_ln+moran+tgi_median_ln+watersum_ln, data = norm_619,na.action=na.fail)
+topmod_Mg_619 <- lm(Mg ~ crriqr+moran+tgi_median, data = norm_619,na.action=na.fail)
 summary(topmod_Mg_619)
 
 res_N_619 <- as.data.frame(modsel_N_619[1])
@@ -854,57 +1011,57 @@ res_619_spectal$dependent <- c("N", "P", "K", "B", "Ca", "Mg", "S", "Zn")
 write.csv(res_619_spectal, "results/res_619_spectral_struc.csv")
 
 #------------------------------------------- LM with spectral only --------------------------------------------------------
-lm_N_619 <- lm(N ~ tgi_mean_ln+tgi_sd+tgi_iqr+watersum_ln, data = norm_619, na.action=na.fail)
+lm_N_619 <- lm(N ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
 summary(lm_N_619)
 vif(lm_N_619)
 modsel_N_619 <- dredge(lm_N_619)
-topmod_N_619 <- lm(N ~ tgi_mean_ln+tgi_iqr+watersum_ln, data = norm_619,na.action=na.fail)
+topmod_N_619 <- lm(N ~ tgi_mean+tgi_iqr+watersum, data = norm_619,na.action=na.fail)
 summary(topmod_N_619)
 N_619_pred <- predict(topmod_N_619)
 N_619_res <- resid(topmod_N_619)
 n_619_table <- cbind(norm_619$N, N_619_pred, N_619_res)
 head(n_619_table)
 
-lm_P_619 <- lm(P ~ tgi_mean_ln+tgi_sd+tgi_iqr+watersum_ln, data = norm_619, na.action=na.fail)
+lm_P_619 <- lm(P ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
 summary(lm_P_619)
 modsel_P_619 <- dredge(lm_P_619)
-topmod_P_619 <- lm(P ~ tgi_iqr+watersum_ln, data = norm_619,na.action=na.fail)
+topmod_P_619 <- lm(P ~ tgi_iqr+watersum, data = norm_619,na.action=na.fail)
 summary(topmod_P_619)
 
-lm_K_619 <- lm(K ~ tgi_mean_ln+tgi_sd+tgi_iqr+watersum_ln, data = norm_619, na.action=na.fail)
+lm_K_619 <- lm(K ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
 summary(lm_K_619)
 modsel_K_619 <- dredge(lm_K_619)
-topmod_K_619 <- lm(K ~ tgi_mean_ln+tgi_sd+watersum_ln, data = norm_619,na.action=na.fail)
+topmod_K_619 <- lm(K ~ tgi_mean+tgi_sd+watersum, data = norm_619,na.action=na.fail)
 summary(topmod_K_619)
 
-lm_Ca_619 <- lm(Ca ~ tgi_mean_ln+tgi_sd+tgi_iqr+watersum_ln, data = norm_619, na.action=na.fail)
+lm_Ca_619 <- lm(Ca ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
 summary(lm_Ca_619)
 modsel_Ca_619 <- dredge(lm_Ca_619)
-topmod_Ca_619 <- lm(Ca ~ watersum_ln, data = norm_619,na.action=na.fail)
+topmod_Ca_619 <- lm(Ca ~ watersum, data = norm_619,na.action=na.fail)
 summary(topmod_Ca_619)
 
-lm_S_619 <- lm(S ~ tgi_mean_ln+tgi_sd+tgi_iqr+watersum_ln, data = norm_619, na.action=na.fail)
+lm_S_619 <- lm(S ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
 summary(lm_S_619)
 modsel_S_619 <- dredge(lm_S_619)
-topmod_S_619 <- lm(S ~ tgi_mean_ln, data = norm_619,na.action=na.fail)
+topmod_S_619 <- lm(S ~ tgi_mean, data = norm_619,na.action=na.fail)
 summary(topmod_S_619)
 
-lm_B_619 <- lm(B ~ tgi_mean_ln+tgi_sd+tgi_iqr+watersum_ln, data = norm_619, na.action=na.fail)
+lm_B_619 <- lm(B ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
 summary(lm_B_619)
 modsel_B_619 <- dredge(lm_B_619)
 topmod_B_619 <- lm(B ~ 1, data = norm_619,na.action=na.fail)
 summary(topmod_B_619)
 
-lm_Zn_619 <- lm(Zn ~ tgi_mean_ln+tgi_sd+tgi_iqr+watersum_ln, data = norm_619, na.action=na.fail)
+lm_Zn_619 <- lm(Zn ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
 summary(lm_Zn_619)
 modsel_Zn_619 <- dredge(lm_Zn_619)
 topmod_Zn_619 <- lm(Zn ~ tgi_iqr, data = norm_619,na.action=na.fail)
 summary(topmod_Zn_619)
 
-lm_Mg_619 <- lm(Mg ~ tgi_mean_ln+tgi_sd+tgi_iqr+watersum_ln, data = norm_619, na.action=na.fail)
+lm_Mg_619 <- lm(Mg ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
 summary(lm_Mg_619)
 modsel_Mg_619 <- dredge(lm_Mg_619)
-topmod_Mg_619 <- lm(Mg ~ tgi_mean_ln+watersum_ln, data = norm_619,na.action=na.fail)
+topmod_Mg_619 <- lm(Mg ~ tgi_mean+watersum, data = norm_619,na.action=na.fail)
 summary(topmod_Mg_619)
 
 res_N_619 <- as.data.frame(modsel_N_619[1])
@@ -944,7 +1101,7 @@ res_619_spectal$dependent <- c("N", "P", "K", "Ca", "Mg", "S", "Zn")
 write.csv(res_619_spectal, "results/res_619_spectralOnly.csv")
 
 #---------------------------------------------------Repeat for 703 -----------------------------------------------
-lm_N_703 <- lm(N ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_N_703 <- lm(N ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 vif(lm_N_703)
 modsel_N_703 <- dredge(lm_N_703)
 topmod_N_703 <- lm(N ~ moran+median, data = norm_703,na.action=na.fail)
@@ -954,43 +1111,43 @@ N_703_res <- resid(topmod_N_703)
 n_703_table <- cbind(norm_703$N, N_703_pred, N_703_res)
 head(n_703_table)
 
-lm_P_703 <- lm(P ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_P_703 <- lm(P ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 summary(lm_P_703)
 modsel_P_703 <- dredge(lm_P_703)
 topmod_P_703 <- lm(P ~ median+crrmedian, data = norm_703,na.action=na.fail)
 summary(topmod_P_703)
 
-lm_K_703 <- lm(K ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_K_703 <- lm(K ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 summary(lm_K_703)
 modsel_K_703 <- dredge(lm_K_703)
 topmod_K_703 <- lm(K ~ crrmedian, data = norm_703,na.action=na.fail)
 summary(topmod_K_703)
 
-lm_Ca_703 <- lm(Ca ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_Ca_703 <- lm(Ca ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 summary(lm_Ca_703)
 modsel_Ca_703 <- dredge(lm_Ca_703)
-topmod_Ca_703 <- lm(Ca ~ watersum_ln, data = norm_703,na.action=na.fail)
+topmod_Ca_703 <- lm(Ca ~ watersum, data = norm_703,na.action=na.fail)
 summary(topmod_Ca_703)
 
-lm_S_703 <- lm(S ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_S_703 <- lm(S ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 summary(lm_S_703)
 modsel_S_703 <- dredge(lm_S_703)
 topmod_S_703 <- lm(S ~ crrmedian+rumple, data = norm_703,na.action=na.fail)
 summary(topmod_S_703)
 
-lm_B_703 <- lm(B ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_B_703 <- lm(B ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 summary(lm_B_703)
 modsel_B_703 <- dredge(lm_B_703)
-topmod_B_703 <- lm(B ~ crrmedian+moran+rumple+watersum_ln, data = norm_703,na.action=na.fail)
+topmod_B_703 <- lm(B ~ crrmedian+moran+rumple+watersum, data = norm_703,na.action=na.fail)
 summary(topmod_B_703)
 
-lm_Zn_703 <- lm(Zn ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_Zn_703 <- lm(Zn ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 summary(lm_Zn_703)
 modsel_Zn_703 <- dredge(lm_Zn_703)
 topmod_Zn_703 <- lm(Zn ~ 1, data = norm_703,na.action=na.fail)
 summary(topmod_Zn_703)
 
-lm_Mg_703 <- lm(Mg ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_Mg_703 <- lm(Mg ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 summary(lm_Mg_703)
 modsel_Mg_703 <- dredge(lm_Mg_703)
 topmod_Mg_703 <- lm(Mg ~ 1, data = norm_703,na.action=na.fail)
@@ -1042,56 +1199,56 @@ res_703$dependent <- c("N", "P", "K", "B", "Ca", "S")
 write.csv(res_703, "results/res_struct_703.csv")
 
 #------------------------------------------- LM with spectral and structural --------------------------------------------------------
-lm_N_703 <- lm(N ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_N_703 <- lm(N ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 vif(lm_N_703)
 modsel_N_703 <- dredge(lm_N_703)
-topmod_N_703 <- lm(N ~ kurt+sd+tgi_median_ln+watersum_ln, data = norm_703,na.action=na.fail)
+topmod_N_703 <- lm(N ~ kurt+sd+tgi_median+watersum, data = norm_703,na.action=na.fail)
 summary(topmod_N_703)
 N_703_pred <- predict(topmod_N_703)
 N_703_res <- resid(topmod_N_703)
 n_703_table <- cbind(norm_703$N, N_703_pred, N_703_res)
 head(n_703_table)
 
-lm_P_703 <- lm(P ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_P_703 <- lm(P ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 summary(lm_P_703)
 modsel_P_703 <- dredge(lm_P_703)
 topmod_P_703 <- lm(P ~ sd, data = norm_703,na.action=na.fail)
 summary(topmod_P_703)
 
-lm_K_703 <- lm(K ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_K_703 <- lm(K ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 summary(lm_K_703)
 modsel_K_703 <- dredge(lm_K_703)
-topmod_K_703 <- lm(K ~ tgi_median_ln, data = norm_703,na.action=na.fail)
+topmod_K_703 <- lm(K ~ tgi_median, data = norm_703,na.action=na.fail)
 summary(topmod_K_703)
 
-lm_Ca_703 <- lm(Ca ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_Ca_703 <- lm(Ca ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 summary(lm_Ca_703)
 modsel_Ca_703 <- dredge(lm_Ca_703)
-topmod_Ca_703 <- lm(Ca ~ watersum_ln, data = norm_703,na.action=na.fail)
+topmod_Ca_703 <- lm(Ca ~ watersum, data = norm_703,na.action=na.fail)
 summary(topmod_Ca_703)
 
-lm_S_703 <- lm(S ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_S_703 <- lm(S ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 summary(lm_S_703)
 modsel_S_703 <- dredge(lm_S_703)
-topmod_S_703 <- lm(S ~ sd+tgi_median_ln, data = norm_703,na.action=na.fail)
+topmod_S_703 <- lm(S ~ sd+tgi_median, data = norm_703,na.action=na.fail)
 summary(topmod_S_703)
 
-lm_B_703 <- lm(B ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_B_703 <- lm(B ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 summary(lm_B_703)
 modsel_B_703 <- dredge(lm_B_703)
-topmod_B_703 <- lm(B ~ sd+tgi_median_ln, data = norm_703,na.action=na.fail)
+topmod_B_703 <- lm(B ~ sd+tgi_median, data = norm_703,na.action=na.fail)
 summary(topmod_B_703)
 
-lm_Zn_703 <- lm(Zn ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_Zn_703 <- lm(Zn ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 summary(lm_Zn_703)
 modsel_Zn_703 <- dredge(lm_Zn_703)
 topmod_Zn_703 <- lm(Zn ~ 1, data = norm_703,na.action=na.fail)
 summary(topmod_Zn_703)
 
-lm_Mg_703 <- lm(Mg ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_Mg_703 <- lm(Mg ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 summary(lm_Mg_703)
 modsel_Mg_703 <- dredge(lm_Mg_703)
-topmod_Mg_703 <- lm(Mg ~ tgi_sd_ln, data = norm_703,na.action=na.fail)
+topmod_Mg_703 <- lm(Mg ~ tgi_sd, data = norm_703,na.action=na.fail)
 summary(topmod_Mg_703)
 
 res_N_703 <- as.data.frame(modsel_N_703[1])
@@ -1132,56 +1289,56 @@ write.csv(res_703_spec_struc, "results/res_703_spec_struc.csv")
 
 
 #------------------------------------------- LM with spectral only --------------------------------------------------------
-lm_N_703 <- lm(N ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_N_703 <- lm(N ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 vif(lm_N_703)
 modsel_N_703 <- dredge(lm_N_703)
-topmod_N_703 <- lm(N ~ tgi_mean_ln, data = norm_703,na.action=na.fail)
+topmod_N_703 <- lm(N ~ tgi_mean, data = norm_703,na.action=na.fail)
 summary(topmod_N_703)
 N_703_pred <- predict(topmod_N_703)
 N_703_res <- resid(topmod_N_703)
 n_703_table <- cbind(norm_703$N, N_703_pred, N_703_res)
 head(n_703_table)
 
-lm_P_703 <- lm(P ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_P_703 <- lm(P ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 summary(lm_P_703)
 modsel_P_703 <- dredge(lm_P_703)
 topmod_P_703 <- lm(P ~ 1, data = norm_703,na.action=na.fail)
 summary(topmod_P_703)
 
-lm_K_703 <- lm(K ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_K_703 <- lm(K ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 summary(lm_K_703)
 modsel_K_703 <- dredge(lm_K_703)
-topmod_K_703 <- lm(K ~ tgi_mean_ln, data = norm_703,na.action=na.fail)
+topmod_K_703 <- lm(K ~ tgi_mean, data = norm_703,na.action=na.fail)
 summary(topmod_K_703)
 
-lm_Ca_703 <- lm(Ca ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_Ca_703 <- lm(Ca ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 summary(lm_Ca_703)
 modsel_Ca_703 <- dredge(lm_Ca_703)
-topmod_Ca_703 <- lm(Ca ~ watersum_ln, data = norm_703,na.action=na.fail)
+topmod_Ca_703 <- lm(Ca ~ watersum, data = norm_703,na.action=na.fail)
 summary(topmod_Ca_703)
 
-lm_S_703 <- lm(S ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_S_703 <- lm(S ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 summary(lm_S_703)
 modsel_S_703 <- dredge(lm_S_703)
-topmod_S_703 <- lm(S ~ tgi_mean_ln, data = norm_703,na.action=na.fail)
+topmod_S_703 <- lm(S ~ tgi_mean, data = norm_703,na.action=na.fail)
 summary(topmod_S_703)
 
-lm_B_703 <- lm(B ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_B_703 <- lm(B ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 summary(lm_B_703)
 modsel_B_703 <- dredge(lm_B_703)
 topmod_B_703 <- lm(B ~ 1, data = norm_703,na.action=na.fail)
 summary(topmod_B_703)
 
-lm_Zn_703 <- lm(Zn ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_Zn_703 <- lm(Zn ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 summary(lm_Zn_703)
 modsel_Zn_703 <- dredge(lm_Zn_703)
 topmod_Zn_703 <- lm(Zn ~ 1, data = norm_703,na.action=na.fail)
 summary(topmod_Zn_703)
 
-lm_Mg_703 <- lm(Mg ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_Mg_703 <- lm(Mg ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 summary(lm_Mg_703)
 modsel_Mg_703 <- dredge(lm_Mg_703)
-topmod_Mg_703 <- lm(Mg ~ tgi_sd_ln, data = norm_703,na.action=na.fail)
+topmod_Mg_703 <- lm(Mg ~ tgi_sd, data = norm_703,na.action=na.fail)
 summary(topmod_Mg_703)
 
 res_N_703 <- as.data.frame(modsel_N_703[1])
@@ -1223,7 +1380,7 @@ write.csv(res_703_spectal, "results/res_703_spectralOnly.csv")
 
 #---------------------------------------------------Repeat for 717 -----------------------------------------------
 
-lm_N_717 <- lm(N ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_N_717 <- lm(N ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 vif(lm_N_717)
 modsel_N_717 <- dredge(lm_N_717)
 topmod_N_717 <- lm(N ~ sd+crrsd+kurt+mean, data = norm_717,na.action=na.fail)
@@ -1233,43 +1390,43 @@ N_717_res <- resid(topmod_N_717)
 n_717_table <- cbind(norm_717$N, N_717_pred, N_717_res)
 head(n_717_table)
 
-lm_P_717 <- lm(P ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_P_717 <- lm(P ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 summary(lm_P_717)
 modsel_P_717 <- dredge(lm_P_717)
 topmod_P_717 <- lm(P ~ mean, data = norm_717,na.action=na.fail)
 summary(topmod_P_717)
 
-lm_K_717 <- lm(K ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_K_717 <- lm(K ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 summary(lm_K_717)
 modsel_K_717 <- dredge(lm_K_717)
 topmod_K_717 <- lm(K ~ crrmedian+crrsd, data = norm_717,na.action=na.fail)
 summary(topmod_K_717)
 
-lm_Ca_717 <- lm(Ca ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_Ca_717 <- lm(Ca ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 summary(lm_Ca_717)
 modsel_Ca_717 <- dredge(lm_Ca_717)
 topmod_Ca_717 <- lm(Ca ~ crrmedian+kurt, data = norm_717,na.action=na.fail)
 summary(topmod_Ca_717)
 
-lm_S_717 <- lm(S ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_S_717 <- lm(S ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 summary(lm_S_717)
 modsel_S_717 <- dredge(lm_S_717)
 topmod_S_717 <- lm(S ~ mean, data = norm_717,na.action=na.fail)
 summary(topmod_S_717)
 
-lm_B_717 <- lm(B ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_B_717 <- lm(B ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 summary(lm_B_717)
 modsel_B_717 <- dredge(lm_B_717)
 topmod_B_717 <- lm(B ~ crrmedian+sd, data = norm_717,na.action=na.fail)
 summary(topmod_B_717)
 
-lm_Zn_717 <- lm(Zn ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_Zn_717 <- lm(Zn ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 summary(lm_Zn_717)
 modsel_Zn_717 <- dredge(lm_Zn_717)
 topmod_Zn_717 <- lm(Zn ~ kurt, data = norm_717,na.action=na.fail)
 summary(topmod_Zn_717)
 
-lm_Mg_717 <- lm(Mg ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_Mg_717 <- lm(Mg ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 summary(lm_Mg_717)
 modsel_Mg_717 <- dredge(lm_Mg_717)
 topmod_Mg_717 <- lm(Mg ~ kurt, data = norm_717,na.action=na.fail)
@@ -1322,53 +1479,53 @@ write.csv(res_717, "results/res_717_struc.csv")
 
 #------------------------------------------- LM spectral and structural --------------------------------------------------------
 
-lm_N_717 <- lm(N ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_N_717 <- lm(N ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 vif(lm_N_717)
 modsel_N_717 <- dredge(lm_N_717)
-topmod_N_717 <- lm(N ~ tgi_median+tgi_sd_ln, data = norm_717,na.action=na.fail)
+topmod_N_717 <- lm(N ~ tgi_median+tgi_sd, data = norm_717,na.action=na.fail)
 summary(topmod_N_717)
 N_717_pred <- predict(topmod_N_717)
 N_717_res <- resid(topmod_N_717)
 n_717_table <- cbind(norm_717$N, N_717_pred, N_717_res)
 head(n_717_table)
 
-lm_P_717 <- lm(P ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_P_717 <- lm(P ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 summary(lm_P_717)
 modsel_P_717 <- dredge(lm_P_717)
 topmod_P_717 <- lm(P ~ 1, data = norm_717,na.action=na.fail)
 summary(topmod_P_717)
 
-lm_K_717 <- lm(K ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_K_717 <- lm(K ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 summary(lm_K_717)
 modsel_K_717 <- dredge(lm_K_717)
-topmod_K_717 <- lm(K ~ crrmedian+tgi_sd_ln, data = norm_717,na.action=na.fail)
+topmod_K_717 <- lm(K ~ crrmedian+tgi_sd, data = norm_717,na.action=na.fail)
 summary(topmod_K_717)
 
-lm_Ca_717 <- lm(Ca ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_Ca_717 <- lm(Ca ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 summary(lm_Ca_717)
 modsel_Ca_717 <- dredge(lm_Ca_717)
 topmod_Ca_717 <- lm(Ca ~ crrmedian+kurt, data = norm_717,na.action=na.fail)
 summary(topmod_Ca_717)
 
-lm_S_717 <- lm(S ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_S_717 <- lm(S ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 summary(lm_S_717)
 modsel_S_717 <- dredge(lm_S_717)
-topmod_S_717 <- lm(S ~ tgi_sd_ln, data = norm_717,na.action=na.fail)
+topmod_S_717 <- lm(S ~ tgi_sd, data = norm_717,na.action=na.fail)
 summary(topmod_S_717)
 
-lm_B_717 <- lm(B ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_B_717 <- lm(B ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 summary(lm_B_717)
 modsel_B_717 <- dredge(lm_B_717)
 topmod_B_717 <- lm(B ~ crrmedian+sd, data = norm_717,na.action=na.fail)
 summary(topmod_B_717)
 
-lm_Zn_717 <- lm(Zn ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_Zn_717 <- lm(Zn ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 summary(lm_Zn_717)
 modsel_Zn_717 <- dredge(lm_Zn_717)
 topmod_Zn_717 <- lm(Zn ~ kurt, data = norm_717,na.action=na.fail)
 summary(topmod_Zn_717)
 
-lm_Mg_717 <- lm(Mg ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_Mg_717 <- lm(Mg ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 summary(lm_Mg_717)
 modsel_Mg_717 <- dredge(lm_Mg_717)
 topmod_Mg_717 <- lm(Mg ~ tgi_median, data = norm_717,na.action=na.fail)
@@ -1411,53 +1568,53 @@ res_717_spec_struc$dependent <- c("N", "K", "B", "Ca", "Mg", "S", "Zn")
 write.csv(res_717_spec_struc, "results/res_717_spec_struc.csv")
 
 #------------------------------------------- LM with spectral only --------------------------------------------------------
-lm_N_717 <- lm(N ~ tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_N_717 <- lm(N ~ tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 vif(lm_N_717)
 modsel_N_717 <- dredge(lm_N_717)
-topmod_N_717 <- lm(N ~ tgi_mean+tgi_iqr_ln, data = norm_717,na.action=na.fail)
+topmod_N_717 <- lm(N ~ tgi_mean+tgi_iqr, data = norm_717,na.action=na.fail)
 summary(topmod_N_717)
 N_717_pred <- predict(topmod_N_717)
 N_717_res <- resid(topmod_N_717)
 n_717_table <- cbind(norm_717$N, N_717_pred, N_717_res)
 head(n_717_table)
 
-lm_P_717 <- lm(P ~tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_P_717 <- lm(P ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 summary(lm_P_717)
 modsel_P_717 <- dredge(lm_P_717)
 topmod_P_717 <- lm(P ~ 1, data = norm_717,na.action=na.fail)
 summary(topmod_P_717)
 
-lm_K_717 <- lm(K ~tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_K_717 <- lm(K ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 summary(lm_K_717)
 modsel_K_717 <- dredge(lm_K_717)
-topmod_K_717 <- lm(K ~ tgi_iqr_ln, data = norm_717,na.action=na.fail)
+topmod_K_717 <- lm(K ~ tgi_iqr, data = norm_717,na.action=na.fail)
 summary(topmod_K_717)
 
-lm_Ca_717 <- lm(Ca ~tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_Ca_717 <- lm(Ca ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 summary(lm_Ca_717)
 modsel_Ca_717 <- dredge(lm_Ca_717)
-topmod_Ca_717 <- lm(Ca ~ watersum_ln, data = norm_717,na.action=na.fail)
+topmod_Ca_717 <- lm(Ca ~ watersum, data = norm_717,na.action=na.fail)
 summary(topmod_Ca_717)
 
-lm_S_717 <- lm(S ~tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_S_717 <- lm(S ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 summary(lm_S_717)
 modsel_S_717 <- dredge(lm_S_717)
-topmod_S_717 <- lm(S ~ tgi_iqr_ln, data = norm_717,na.action=na.fail)
+topmod_S_717 <- lm(S ~ tgi_iqr, data = norm_717,na.action=na.fail)
 summary(topmod_S_717)
 
-lm_B_717 <- lm(B ~tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_B_717 <- lm(B ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 summary(lm_B_717)
 modsel_B_717 <- dredge(lm_B_717)
 topmod_B_717 <- lm(B ~ 1, data = norm_717,na.action=na.fail)
 summary(topmod_B_717)
 
-lm_Zn_717 <- lm(Zn ~tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_Zn_717 <- lm(Zn ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 summary(lm_Zn_717)
 modsel_Zn_717 <- dredge(lm_Zn_717)
 topmod_Zn_717 <- lm(Zn ~ 1, data = norm_717,na.action=na.fail)
 summary(topmod_Zn_717)
 
-lm_Mg_717 <- lm(Mg ~tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_Mg_717 <- lm(Mg ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 summary(lm_Mg_717)
 modsel_Mg_717 <- dredge(lm_Mg_717)
 topmod_Mg_717 <- lm(Mg ~ tgi_mean, data = norm_717,na.action=na.fail)
@@ -1502,56 +1659,56 @@ write.csv(res_717_spectal, "results/res_717_spectralOnly.csv")
 
 #---------------------------------------------------Use first nutrient data for 703 and 717 -----------------------------------------------
 # ----------------------------------------- 703 struct only -------------------------------------
-lm_N_703 <- lm(N ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_N_703 <- lm(N ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 vif(lm_N_703)
 modsel_N_703 <- dredge(lm_N_703)
-topmod_N_703 <- lm(N ~ moran+median+watersum_ln, data = norm_703,na.action=na.fail)
+topmod_N_703 <- lm(N ~ moran+median+watersum, data = norm_703,na.action=na.fail)
 summary(topmod_N_703)
 N_703_pred <- predict(topmod_N_703)
 N_703_res <- resid(topmod_N_703)
 n_703_table <- cbind(norm_703$N, N_703_pred, N_703_res)
 head(n_703_table)
 
-lm_P_703 <- lm(P ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_P_703 <- lm(P ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 summary(lm_P_703)
 modsel_P_703 <- dredge(lm_P_703)
-topmod_P_703 <- lm(P ~ median+moran+watersum_ln, data = norm_703,na.action=na.fail)
+topmod_P_703 <- lm(P ~ median+moran+watersum, data = norm_703,na.action=na.fail)
 summary(topmod_P_703)
 
-lm_K_703 <- lm(K ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_K_703 <- lm(K ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 summary(lm_K_703)
 modsel_K_703 <- dredge(lm_K_703)
 topmod_K_703 <- lm(K ~ crrmedian, data = norm_703,na.action=na.fail)
 summary(topmod_K_703)
 
-lm_Ca_703 <- lm(Ca ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_Ca_703 <- lm(Ca ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 summary(lm_Ca_703)
 modsel_Ca_703 <- dredge(lm_Ca_703)
-topmod_Ca_703 <- lm(Ca ~ crrmedian+moran+watersum_ln, data = norm_703,na.action=na.fail)
+topmod_Ca_703 <- lm(Ca ~ crrmedian+moran+watersum, data = norm_703,na.action=na.fail)
 summary(topmod_Ca_703)
 
-lm_S_703 <- lm(S ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_S_703 <- lm(S ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 summary(lm_S_703)
 modsel_S_703 <- dredge(lm_S_703)
 topmod_S_703 <- lm(S ~ crrmedian+rumple, data = norm_703,na.action=na.fail)
 summary(topmod_S_703)
 
-lm_B_703 <- lm(B ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_B_703 <- lm(B ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 summary(lm_B_703)
 modsel_B_703 <- dredge(lm_B_703)
 topmod_B_703 <- lm(B ~ crrmedian+rumple, data = norm_703,na.action=na.fail)
 summary(topmod_B_703)
 
-lm_Zn_703 <- lm(Zn ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_Zn_703 <- lm(Zn ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 summary(lm_Zn_703)
 modsel_Zn_703 <- dredge(lm_Zn_703)
 topmod_Zn_703 <- lm(Zn ~ crrmedian+median, data = norm_703,na.action=na.fail)
 summary(topmod_Zn_703)
 
-lm_Mg_703 <- lm(Mg ~ median+crrmedian+crrsd+kurt_ln+moran+rumple+watersum_ln, data = norm_703, na.action=na.fail)
+lm_Mg_703 <- lm(Mg ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
 summary(lm_Mg_703)
 modsel_Mg_703 <- dredge(lm_Mg_703)
-topmod_Mg_703 <- lm(Mg ~ median+moran+watersum_ln, data = norm_703,na.action=na.fail)
+topmod_Mg_703 <- lm(Mg ~ median+moran+watersum, data = norm_703,na.action=na.fail)
 summary(topmod_Mg_703)
 
 # function to get lm pvalue
@@ -1600,56 +1757,56 @@ res_703$dependent <- c("N", "P", "K", "B", "Ca", "S", "Mg")
 write.csv(res_703, "results/res_703_struc_nut1.csv")
 
 #------------------------------------------- LM with spectral and structural --------------------------------------------------------
-lm_N_703 <- lm(N ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_N_703 <- lm(N ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 vif(lm_N_703)
 modsel_N_703 <- dredge(lm_N_703)
-topmod_N_703 <- lm(N ~ median+tgi_median_ln+watersum_ln, data = norm_703,na.action=na.fail)
+topmod_N_703 <- lm(N ~ median+tgi_median+watersum, data = norm_703,na.action=na.fail)
 summary(topmod_N_703)
 N_703_pred <- predict(topmod_N_703)
 N_703_res <- resid(topmod_N_703)
 n_703_table <- cbind(norm_703$N, N_703_pred, N_703_res)
 head(n_703_table)
 
-lm_P_703 <- lm(P ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_P_703 <- lm(P ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 summary(lm_P_703)
 modsel_P_703 <- dredge(lm_P_703)
-topmod_P_703 <- lm(P ~ median+tgi_median_ln+watersum_ln, data = norm_703,na.action=na.fail)
+topmod_P_703 <- lm(P ~ median+tgi_median+watersum, data = norm_703,na.action=na.fail)
 summary(topmod_P_703)
 
-lm_K_703 <- lm(K ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_K_703 <- lm(K ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 summary(lm_K_703)
 modsel_K_703 <- dredge(lm_K_703)
-topmod_K_703 <- lm(K ~ tgi_median_ln, data = norm_703,na.action=na.fail)
+topmod_K_703 <- lm(K ~ tgi_median, data = norm_703,na.action=na.fail)
 summary(topmod_K_703)
 
-lm_Ca_703 <- lm(Ca ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_Ca_703 <- lm(Ca ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 summary(lm_Ca_703)
 modsel_Ca_703 <- dredge(lm_Ca_703)
-topmod_Ca_703 <- lm(Ca ~ moran+tgi_median_ln+watersum_ln, data = norm_703,na.action=na.fail)
+topmod_Ca_703 <- lm(Ca ~ moran+tgi_median+watersum, data = norm_703,na.action=na.fail)
 summary(topmod_Ca_703)
 
-lm_S_703 <- lm(S ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_S_703 <- lm(S ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 summary(lm_S_703)
 modsel_S_703 <- dredge(lm_S_703)
-topmod_S_703 <- lm(S ~ median+tgi_median_ln, data = norm_703,na.action=na.fail)
+topmod_S_703 <- lm(S ~ median+tgi_median, data = norm_703,na.action=na.fail)
 summary(topmod_S_703)
 
-lm_B_703 <- lm(B ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_B_703 <- lm(B ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 summary(lm_B_703)
 modsel_B_703 <- dredge(lm_B_703)
 topmod_B_703 <- lm(B ~ median, data = norm_703,na.action=na.fail)
 summary(topmod_B_703)
 
-lm_Zn_703 <- lm(Zn ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_Zn_703 <- lm(Zn ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 summary(lm_Zn_703)
 modsel_Zn_703 <- dredge(lm_Zn_703)
-topmod_Zn_703 <- lm(Zn ~ median+tgi_median_ln+tgi_sd_ln, data = norm_703,na.action=na.fail)
+topmod_Zn_703 <- lm(Zn ~ median+tgi_median+tgi_sd, data = norm_703,na.action=na.fail)
 summary(topmod_Zn_703)
 
-lm_Mg_703 <- lm(Mg ~ median+sd+crrsd+kurt_ln+moran+watersum_ln+tgi_median_ln+tgi_sd_ln, data = norm_703, na.action=na.fail)
+lm_Mg_703 <- lm(Mg ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
 summary(lm_Mg_703)
 modsel_Mg_703 <- dredge(lm_Mg_703)
-topmod_Mg_703 <- lm(Mg ~ median+tgi_median_ln, data = norm_703,na.action=na.fail)
+topmod_Mg_703 <- lm(Mg ~ median+tgi_median, data = norm_703,na.action=na.fail)
 summary(topmod_Mg_703)
 
 res_N_703 <- as.data.frame(modsel_N_703[1])
@@ -1690,56 +1847,56 @@ write.csv(res_703_spec_struc, "results/res_703_spec_struc_nut1.csv")
 
 
 #------------------------------------------- LM with spectral only --------------------------------------------------------
-lm_N_703 <- lm(N ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_N_703 <- lm(N ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 vif(lm_N_703)
 modsel_N_703 <- dredge(lm_N_703)
-topmod_N_703 <- lm(N ~ tgi_mean_ln+watersum_ln, data = norm_703,na.action=na.fail)
+topmod_N_703 <- lm(N ~ tgi_mean+watersum, data = norm_703,na.action=na.fail)
 summary(topmod_N_703)
 N_703_pred <- predict(topmod_N_703)
 N_703_res <- resid(topmod_N_703)
 n_703_table <- cbind(norm_703$N, N_703_pred, N_703_res)
 head(n_703_table)
 
-lm_P_703 <- lm(P ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_P_703 <- lm(P ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 summary(lm_P_703)
 modsel_P_703 <- dredge(lm_P_703)
-topmod_P_703 <- lm(P ~ tgi_mean_ln+watersum_ln, data = norm_703,na.action=na.fail)
+topmod_P_703 <- lm(P ~ tgi_mean+watersum, data = norm_703,na.action=na.fail)
 summary(topmod_P_703)
 
-lm_K_703 <- lm(K ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_K_703 <- lm(K ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 summary(lm_K_703)
 modsel_K_703 <- dredge(lm_K_703)
-topmod_K_703 <- lm(K ~ tgi_mean_ln, data = norm_703,na.action=na.fail)
+topmod_K_703 <- lm(K ~ tgi_mean, data = norm_703,na.action=na.fail)
 summary(topmod_K_703)
 
-lm_Ca_703 <- lm(Ca ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_Ca_703 <- lm(Ca ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 summary(lm_Ca_703)
 modsel_Ca_703 <- dredge(lm_Ca_703)
-topmod_Ca_703 <- lm(Ca ~ watersum_ln, data = norm_703,na.action=na.fail)
+topmod_Ca_703 <- lm(Ca ~ watersum, data = norm_703,na.action=na.fail)
 summary(topmod_Ca_703)
 
-lm_S_703 <- lm(S ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_S_703 <- lm(S ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 summary(lm_S_703)
 modsel_S_703 <- dredge(lm_S_703)
-topmod_S_703 <- lm(S ~ tgi_mean_ln+tgi_sd_ln, data = norm_703,na.action=na.fail)
+topmod_S_703 <- lm(S ~ tgi_mean+tgi_sd, data = norm_703,na.action=na.fail)
 summary(topmod_S_703)
 
-lm_B_703 <- lm(B ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_B_703 <- lm(B ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 summary(lm_B_703)
 modsel_B_703 <- dredge(lm_B_703)
-topmod_B_703 <- lm(B ~ tgi_mean_ln, data = norm_703,na.action=na.fail)
+topmod_B_703 <- lm(B ~ tgi_mean, data = norm_703,na.action=na.fail)
 summary(topmod_B_703)
 
-lm_Zn_703 <- lm(Zn ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_Zn_703 <- lm(Zn ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 summary(lm_Zn_703)
 modsel_Zn_703 <- dredge(lm_Zn_703)
-topmod_Zn_703 <- lm(Zn ~ tgi_mean_ln+tgi_sd_ln, data = norm_703,na.action=na.fail)
+topmod_Zn_703 <- lm(Zn ~ tgi_mean+tgi_sd, data = norm_703,na.action=na.fail)
 summary(topmod_Zn_703)
 
-lm_Mg_703 <- lm(Mg ~tgi_mean_ln+tgi_sd_ln+watersum_ln, data = norm_703, na.action=na.fail)
+lm_Mg_703 <- lm(Mg ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
 summary(lm_Mg_703)
 modsel_Mg_703 <- dredge(lm_Mg_703)
-topmod_Mg_703 <- lm(Mg ~ tgi_mean_ln, data = norm_703,na.action=na.fail)
+topmod_Mg_703 <- lm(Mg ~ tgi_mean, data = norm_703,na.action=na.fail)
 summary(topmod_Mg_703)
 
 res_N_703 <- as.data.frame(modsel_N_703[1])
@@ -1780,56 +1937,56 @@ write.csv(res_703_spectal, "results/res_703_spectralOnly_nut1.csv")
 
 #---------------------------------------------------Repeat for 717 -----------------------------------------------
 
-lm_N_717 <- lm(N ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_N_717 <- lm(N ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 vif(lm_N_717)
 modsel_N_717 <- dredge(lm_N_717)
-topmod_N_717 <- lm(N ~ sd+crrsd+watersum_ln+mean, data = norm_717,na.action=na.fail)
+topmod_N_717 <- lm(N ~ sd+crrsd+watersum+mean, data = norm_717,na.action=na.fail)
 summary(topmod_N_717)
 N_717_pred <- predict(topmod_N_717)
 N_717_res <- resid(topmod_N_717)
 n_717_table <- cbind(norm_717$N, N_717_pred, N_717_res)
 head(n_717_table)
 
-lm_P_717 <- lm(P ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_P_717 <- lm(P ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 summary(lm_P_717)
 modsel_P_717 <- dredge(lm_P_717)
-topmod_P_717 <- lm(P ~ sd+crrsd+watersum_ln+mean, data = norm_717,na.action=na.fail)
+topmod_P_717 <- lm(P ~ sd+crrsd+watersum+mean, data = norm_717,na.action=na.fail)
 summary(topmod_P_717)
 
-lm_K_717 <- lm(K ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_K_717 <- lm(K ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 summary(lm_K_717)
 modsel_K_717 <- dredge(lm_K_717)
 topmod_K_717 <- lm(K ~ crrmedian+crrsd, data = norm_717,na.action=na.fail)
 summary(topmod_K_717)
 
-lm_Ca_717 <- lm(Ca ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_Ca_717 <- lm(Ca ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 summary(lm_Ca_717)
 modsel_Ca_717 <- dredge(lm_Ca_717)
 topmod_Ca_717 <- lm(Ca ~ moran, data = norm_717,na.action=na.fail)
 summary(topmod_Ca_717)
 
-lm_S_717 <- lm(S ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_S_717 <- lm(S ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 summary(lm_S_717)
 modsel_S_717 <- dredge(lm_S_717)
 topmod_S_717 <- lm(S ~ mean+crrmedian, data = norm_717,na.action=na.fail)
 summary(topmod_S_717)
 
-lm_B_717 <- lm(B ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_B_717 <- lm(B ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 summary(lm_B_717)
 modsel_B_717 <- dredge(lm_B_717)
 topmod_B_717 <- lm(B ~ crrmedian+sd+kurt+moran, data = norm_717,na.action=na.fail)
 summary(topmod_B_717)
 
-lm_Zn_717 <- lm(Zn ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_Zn_717 <- lm(Zn ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 summary(lm_Zn_717)
 modsel_Zn_717 <- dredge(lm_Zn_717)
 topmod_Zn_717 <- lm(Zn ~ mean+sd, data = norm_717,na.action=na.fail)
 summary(topmod_Zn_717)
 
-lm_Mg_717 <- lm(Mg ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum_ln, data = norm_717, na.action=na.fail)
+lm_Mg_717 <- lm(Mg ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
 summary(lm_Mg_717)
 modsel_Mg_717 <- dredge(lm_Mg_717)
-topmod_Mg_717 <- lm(Mg ~ crrsd+kurt+mean+sd+watersum_ln, data = norm_717,na.action=na.fail)
+topmod_Mg_717 <- lm(Mg ~ crrsd+kurt+mean+sd+watersum, data = norm_717,na.action=na.fail)
 summary(topmod_Mg_717)
 
 # function to get lm pvalue
@@ -1879,56 +2036,56 @@ write.csv(res_717, "results/res_717_struc_nut1.csv")
 
 #------------------------------------------- LM spectral and structural --------------------------------------------------------
 
-lm_N_717 <- lm(N ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_N_717 <- lm(N ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 vif(lm_N_717)
 modsel_N_717 <- dredge(lm_N_717)
-topmod_N_717 <- lm(N ~ tgi_median+tgi_sd_ln+watersum_ln, data = norm_717,na.action=na.fail)
+topmod_N_717 <- lm(N ~ tgi_median+tgi_sd+watersum, data = norm_717,na.action=na.fail)
 summary(topmod_N_717)
 N_717_pred <- predict(topmod_N_717)
 N_717_res <- resid(topmod_N_717)
 n_717_table <- cbind(norm_717$N, N_717_pred, N_717_res)
 head(n_717_table)
 
-lm_P_717 <- lm(P ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_P_717 <- lm(P ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 summary(lm_P_717)
 modsel_P_717 <- dredge(lm_P_717)
-topmod_P_717 <- lm(P ~ tgi_sd_ln+watersum_ln, data = norm_717,na.action=na.fail)
+topmod_P_717 <- lm(P ~ tgi_sd+watersum, data = norm_717,na.action=na.fail)
 summary(topmod_P_717)
 
-lm_K_717 <- lm(K ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_K_717 <- lm(K ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 summary(lm_K_717)
 modsel_K_717 <- dredge(lm_K_717)
-topmod_K_717 <- lm(K ~ crrmedian+tgi_sd_ln, data = norm_717,na.action=na.fail)
+topmod_K_717 <- lm(K ~ crrmedian+tgi_sd, data = norm_717,na.action=na.fail)
 summary(topmod_K_717)
 
-lm_Ca_717 <- lm(Ca ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_Ca_717 <- lm(Ca ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 summary(lm_Ca_717)
 modsel_Ca_717 <- dredge(lm_Ca_717)
 topmod_Ca_717 <- lm(Ca ~ moran, data = norm_717,na.action=na.fail)
 summary(topmod_Ca_717)
 
-lm_S_717 <- lm(S ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_S_717 <- lm(S ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 summary(lm_S_717)
 modsel_S_717 <- dredge(lm_S_717)
 topmod_S_717 <- lm(S ~ crrmedian, data = norm_717,na.action=na.fail)
 summary(topmod_S_717)
 
-lm_B_717 <- lm(B ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_B_717 <- lm(B ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 summary(lm_B_717)
 modsel_B_717 <- dredge(lm_B_717)
-topmod_B_717 <- lm(B ~ crrmedian+kurt+moran+sd+tgi_sd_ln, data = norm_717,na.action=na.fail)
+topmod_B_717 <- lm(B ~ crrmedian+kurt+moran+sd+tgi_sd, data = norm_717,na.action=na.fail)
 summary(topmod_B_717)
 
-lm_Zn_717 <- lm(Zn ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_Zn_717 <- lm(Zn ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 summary(lm_Zn_717)
 modsel_Zn_717 <- dredge(lm_Zn_717)
 topmod_Zn_717 <- lm(Zn ~ crrmedian+kurt+tgi_median, data = norm_717,na.action=na.fail)
 summary(topmod_Zn_717)
 
-lm_Mg_717 <- lm(Mg ~ sd+crrmedian+crrsd+kurt+moran+watersum_ln+tgi_median+tgi_sd_ln, data = norm_717, na.action=na.fail)
+lm_Mg_717 <- lm(Mg ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
 summary(lm_Mg_717)
 modsel_Mg_717 <- dredge(lm_Mg_717)
-topmod_Mg_717 <- lm(Mg ~ tgi_median+tgi_sd_ln, data = norm_717,na.action=na.fail)
+topmod_Mg_717 <- lm(Mg ~ tgi_median+tgi_sd, data = norm_717,na.action=na.fail)
 summary(topmod_Mg_717)
 
 res_N_717 <- as.data.frame(modsel_N_717[1])
@@ -1968,56 +2125,56 @@ res_717_spec_struc$dependent <- c("N", "P", "K", "B", "Ca", "Mg", "S", "Zn")
 write.csv(res_717_spec_struc, "results/res_717_spec_struc_nut1.csv")
 
 #------------------------------------------- LM with spectral only --------------------------------------------------------
-lm_N_717 <- lm(N ~ tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_N_717 <- lm(N ~ tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 vif(lm_N_717)
 modsel_N_717 <- dredge(lm_N_717)
-topmod_N_717 <- lm(N ~ tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717,na.action=na.fail)
+topmod_N_717 <- lm(N ~ tgi_mean+tgi_iqr+watersum, data = norm_717,na.action=na.fail)
 summary(topmod_N_717)
 N_717_pred <- predict(topmod_N_717)
 N_717_res <- resid(topmod_N_717)
 n_717_table <- cbind(norm_717$N, N_717_pred, N_717_res)
 head(n_717_table)
 
-lm_P_717 <- lm(P ~tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_P_717 <- lm(P ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 summary(lm_P_717)
 modsel_P_717 <- dredge(lm_P_717)
-topmod_P_717 <- lm(P ~ tgi_mean+watersum_ln, data = norm_717,na.action=na.fail)
+topmod_P_717 <- lm(P ~ tgi_mean+watersum, data = norm_717,na.action=na.fail)
 summary(topmod_P_717)
 
-lm_K_717 <- lm(K ~tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_K_717 <- lm(K ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 summary(lm_K_717)
 modsel_K_717 <- dredge(lm_K_717)
-topmod_K_717 <- lm(K ~ tgi_mean+tgi_iqr_ln, data = norm_717,na.action=na.fail)
+topmod_K_717 <- lm(K ~ tgi_mean+tgi_iqr, data = norm_717,na.action=na.fail)
 summary(topmod_K_717)
 
-lm_Ca_717 <- lm(Ca ~tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_Ca_717 <- lm(Ca ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 summary(lm_Ca_717)
 modsel_Ca_717 <- dredge(lm_Ca_717)
 topmod_Ca_717 <- lm(Ca ~ tgi_mean, data = norm_717,na.action=na.fail)
 summary(topmod_Ca_717)
 
-lm_S_717 <- lm(S ~tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_S_717 <- lm(S ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 summary(lm_S_717)
 modsel_S_717 <- dredge(lm_S_717)
-topmod_S_717 <- lm(S ~ tgi_iqr_ln+watersum_ln, data = norm_717,na.action=na.fail)
+topmod_S_717 <- lm(S ~ tgi_iqr+watersum, data = norm_717,na.action=na.fail)
 summary(topmod_S_717)
 
-lm_B_717 <- lm(B ~tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_B_717 <- lm(B ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 summary(lm_B_717)
 modsel_B_717 <- dredge(lm_B_717)
-topmod_B_717 <- lm(B ~ tgi_iqr_ln, data = norm_717,na.action=na.fail)
+topmod_B_717 <- lm(B ~ tgi_iqr, data = norm_717,na.action=na.fail)
 summary(topmod_B_717)
 
-lm_Zn_717 <- lm(Zn ~tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_Zn_717 <- lm(Zn ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 summary(lm_Zn_717)
 modsel_Zn_717 <- dredge(lm_Zn_717)
-topmod_Zn_717 <- lm(Zn ~ tgi_iqr_ln, data = norm_717,na.action=na.fail)
+topmod_Zn_717 <- lm(Zn ~ tgi_iqr, data = norm_717,na.action=na.fail)
 summary(topmod_Zn_717)
 
-lm_Mg_717 <- lm(Mg ~tgi_mean+tgi_iqr_ln+watersum_ln, data = norm_717, na.action=na.fail)
+lm_Mg_717 <- lm(Mg ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
 summary(lm_Mg_717)
 modsel_Mg_717 <- dredge(lm_Mg_717)
-topmod_Mg_717 <- lm(Mg ~ tgi_mean+tgi_iqr_ln, data = norm_717,na.action=na.fail)
+topmod_Mg_717 <- lm(Mg ~ tgi_mean+tgi_iqr, data = norm_717,na.action=na.fail)
 summary(topmod_Mg_717)
 
 res_N_717 <- as.data.frame(modsel_N_717[1])
@@ -2062,7 +2219,7 @@ write.csv(res_717_spectal, "results/res_717_spectralOnly_nut1.csv")
 # add treatment/fert column
 norm_619$group <- paste(norm_619$treatment, norm_619$fertilizer, sep="_")
 
-mix_med_717 <- lmer(B ~ median+moran+(1|treatment), data = norm_717, na.action = na.fail)
+mix_med_717 <- lmer(N ~ crrmedian+kurt+moran+(1|soils), data = norm_619, na.action = na.fail)
 summary(mix_med_717)
 r.squaredGLMM(mix_med_717)
 # Of course using treatment will better explain B levels... How is this helpful?
