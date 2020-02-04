@@ -102,6 +102,7 @@ blue_masked_703 <- mask(blue_703, nosoil_703)
 red_masked_717 <- mask(red_717, nosoil_717)
 green_masked_717 <- mask(green_717, nosoil_717)
 blue_masked_717 <- mask(blue_717, nosoil_717)
+
 #----------------------------------------------------Spectral indicies------------------------------------------------------------
 
 # Calculate VARI
@@ -111,7 +112,7 @@ varInd_619[varInd_619 > 1] <- 1
 varInd_703 <- (green_masked_703-red_masked_703)/(green_masked_703+red_masked_703-blue_masked_703)
 varInd_703[varInd_703 < -1] <- -1
 varInd_703[varInd_703 > 1] <- 1
-varInd_703 <- (green_masked_703-red_masked_703)/(green_masked_703+red_masked_703-blue_masked_703)
+varInd_717 <- (green_masked_717-red_masked_703)/(green_masked_717+red_masked_717-blue_masked_717)
 varInd_717[varInd_717 < -1] <- -1
 varInd_717[varInd_717 > 1] <- 1
 
@@ -188,29 +189,15 @@ crr <- function(x){
   (mean(x, na.rm=T)-min(x, na.rm=T))/(max(x, na.rm=T)-min(x, na.rm=T))
 }
 
-crrRast_619 <- focal(csm_619, w=matrix(1/81, nc=9, nr=9), crr)
-crrRast_masked_619 <- mask(crrRast_619, nosoil_619)
-crrRast_703 <- focal(csm_703, w=matrix(1/81, nc=9, nr=9), crr)
-crrRast_masked_703 <- mask(crrRast_703, nosoil_703)
-crrRast_717 <- focal(csm_717, w=matrix(1/81, nc=9, nr=9), crr)
-crrRast_masked_717 <- mask(crrRast_717, nosoil_717)
+crrRast_619 <- focal(csm_619, w=matrix(1/25, nc=5, nr=5), crr)
+crrRast_703 <- focal(csm_703, w=matrix(1/25, nc=5, nr=5), crr)
+crrRast_717 <- focal(csm_717, w=matrix(1/25, nc=5, nr=5), crr)
 crrRast_list <- list(crrRast_619,crrRast_703,crrRast_717)
 
 writeRaster(crrRast_619, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/results/crr_619.tif", format="GTiff", overwrite = T)
 writeRaster(crrRast_703, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/results/crr_703.tif", format="GTiff", overwrite = T)
 writeRaster(crrRast_717, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/results/crr_717.tif", format="GTiff", overwrite = T)
 
-# Check if crr within plot is normally distributed
-# crr_619_df <- as.data.frame(crrRast_619)
-# shapiro.test(sample(crr_619_df$layer, 5000))
-# histogram(crr_619_df$layer)
-# velox_crr_619 <- velox(crrRast_619)
-# crr_extract_619 <- velox_crr_619$extract(sp=plots)
-# names(crr_extract_619) <- plots$Id
-
-#histogram(crr_extract_619$`502-E`)
-#shapiro.test(sample(crr_extract_619$`502-E`, 5000))
-#ggqqplot(sample(crr_extract_619$`502-E`, 5000))
 
 crr_metrics <- function(x){
   veloxRast <- velox(x)
@@ -222,10 +209,6 @@ crr_metrics <- function(x){
   crriqr <- sapply(extract, IQR, na.rm=T)
   crrDF <- data.frame(plots=plots$plotid, crrmedian= crrmedian, crrmean=crrmean, crrsd = crrsd, crriqr = crriqr)
   crrDF
-  # Normalize data
-  # norm_crr <- as.data.frame(scale(crrDF[,2:4]))
-  # norm_crr$plots <- crrDF$plots
-  # norm_crr
 }
 
 crr_df_list <- lapply(crrRast_list, crr_metrics)
@@ -304,7 +287,6 @@ plots_717 <- merge(plots_717, rumple_df_list[[3]], by.x="plotid", by.y="plots")
 autocor_metrics <- function(x, w){
   plotNums <- plots$plotid
   morans_all <- numeric(length(plotNums))
-  #moran_local_all <- numeric(length(plotNums))
   geary_all <- numeric(length(plotNums))
   count <- 1
   
@@ -314,15 +296,12 @@ autocor_metrics <- function(x, w){
     extract <- crop(x, plots[position,])
     moran <- Moran(extract, w)
     morans_all[count] <- moran
-    #moran_local <- MoranLocal(extract, w)
-    #moran_local_all[count] <- moran_local
     geary <- Geary(extract, w)
     geary_all[count] <- geary
     count <- count+1
   }
   
   names(morans_all) <- plots$plotid
-  #names(morans_local_all) <- plots$plotid
   names(geary_all) <- plots$plotid
   autocor_df <- data.frame(plots=plots$plotid, moran= morans_all, geary=geary_all)
   autocor_df
@@ -349,7 +328,7 @@ autocor_rasters <- function(x, w){
     position <- match(num, tmp$plotid)
     cropped <- crop(x, plots[position,])
     #masked <- mask(cropped, plots[position,])
-    moran_local <- GearyLocal(cropped, w)
+    moran_local <- MoranLocal(cropped, w)
     #NAvalue(moran_local) <- 0
     moran_local_all <- append(moran_local_all, moran_local)
     count <- count+1
@@ -360,9 +339,9 @@ autocor_rasters <- function(x, w){
   moran_local_all
 }
 
-local_moran_plots_619 <- autocor_rasters(csm_masked_619, matrix(c(rep.int(1,84), 0, rep.int(1,84)), nc=13, nr=13))
+local_moran_plots_619 <- autocor_rasters(csm_619, matrix(c(rep.int(1,84), 0, rep.int(1,84)), nc=13, nr=13))
 names(local_moran_plots_619) <- NULL
-local_moran_plots_619$filename <- 'gearylocal_619.tif'
+local_moran_plots_619$filename <- 'moranlocal_619.tif'
 local_moran_plots_619$overwrite <- TRUE
 local_moran_plots_619$fun <- sum
 
@@ -401,130 +380,130 @@ names(agg_717)[15] <- "spad"
 # -------------------------------------------------- Normal transformation-------------------------------------------
 
 #Check for normal distribution of independent variables and transform 
-
-shapiro.test(agg_619$mean)
-shapiro.test(agg_619$median)
-shapiro.test(agg_619$sd)
-shapiro.test(agg_619$iqr)
-shapiro.test(agg_619$crrmedian)
-shapiro.test(agg_619$crrmean)
-shapiro.test(agg_619$crrsd) # not normal
-agg_619$crrsd_ln <- transformTukey(agg_619$crrsd)
-shapiro.test(agg_619$crriqr) # not normal
-agg_619$crriqr_ln <- transformTukey(agg_619$crriqr)
-shapiro.test(agg_619$skew)
-shapiro.test(agg_619$kurt)
-shapiro.test(agg_619$moran)
-shapiro.test(agg_619$geary)
-shapiro.test(agg_619$PlotCRR)
-shapiro.test(agg_619$watersum) # not normal
-agg_619$watersum_ln <- transformTukey(agg_619$watersum)
-shapiro.test(agg_619$varInd_median)
-shapiro.test(agg_619$varInd_mean)
-shapiro.test(agg_619$varInd_sd) # not normal
-agg_619$varInd_sd_ln <- transformTukey(agg_619$varInd_sd)
-shapiro.test(agg_619$varInd_iqr)
-shapiro.test(agg_619$tgi_mean) # not normal
-agg_619$tgi_mean_ln <- transformTukey(agg_619$tgi_mean)
-shapiro.test(agg_619$tgi_median) # not normal
-agg_619$tgi_median_ln <- transformTukey(agg_619$tgi_median)
-shapiro.test(agg_619$tgi_sd)
-shapiro.test(agg_619$tgi_iqr)
-
-shapiro.test(agg_703$mean)
-shapiro.test(agg_703$median)
-shapiro.test(agg_703$sd)
-shapiro.test(agg_703$iqr) # not normal
-agg_703$iqr_ln <- transformTukey(agg_703$iqr)
-shapiro.test(agg_703$crrmedian)
-shapiro.test(agg_703$crrmean)
-shapiro.test(agg_703$crrsd)
-shapiro.test(agg_703$crriqr)
-shapiro.test(agg_703$skew)
-shapiro.test(agg_703$kurt) # not normal
-agg_703$kurt_ln <- transformTukey(agg_703$kurt)
-shapiro.test(agg_703$moran)
-shapiro.test(agg_703$geary)
-shapiro.test(agg_703$PlotCRR)
-shapiro.test(agg_703$watersum) # not normal
-agg_703$watersum_ln <- transformTukey(agg_703$watersum)
-shapiro.test(agg_703$varInd_median) # not normal
-agg_703$varInd_median_ln <- transformTukey(agg_703$varInd_median)
-shapiro.test(agg_703$varInd_mean) # not normal
-agg_703$varInd_mean_ln <- transformTukey(agg_703$varInd_mean)
-shapiro.test(agg_703$varInd_sd)
-shapiro.test(agg_703$varInd_iqr)
-shapiro.test(agg_703$tgi_mean) # not normal
-agg_703$tgi_mean_ln <- transformTukey(agg_703$tgi_mean)
-shapiro.test(agg_703$tgi_median) # not normal
-agg_703$tgi_median_ln <- transformTukey(agg_703$tgi_median)
-shapiro.test(agg_703$tgi_sd) # not normal
-agg_703$tgi_sd_ln <- transformTukey(agg_703$tgi_sd)
-shapiro.test(agg_703$tgi_iqr) # not normal
-agg_703$tgi_iqr_ln <- transformTukey(agg_703$tgi_iqr)
-
-shapiro.test(agg_717$mean)
-shapiro.test(agg_717$median)
-shapiro.test(agg_717$sd)
-shapiro.test(agg_717$iqr)
-shapiro.test(agg_717$crrmedian)
-shapiro.test(agg_717$crrmean)
-shapiro.test(agg_717$crrsd)
-shapiro.test(agg_717$crriqr)
-shapiro.test(agg_717$skew)
-shapiro.test(agg_717$kurt) # not normal, cannot transform
-shapiro.test(agg_717$moran)
-shapiro.test(agg_717$geary) # not normal
-agg_717$geary_ln <- transformTukey(agg_717$geary)
-shapiro.test(agg_717$PlotCRR)
-shapiro.test(agg_717$watersum) # not normal
-agg_717$watersum_ln <- transformTukey(agg_717$watersum)
-shapiro.test(agg_717$varInd_median) # not normal
-agg_717$varInd_median_ln <- transformTukey(agg_717$varInd_median)
-shapiro.test(agg_717$varInd_mean)
-shapiro.test(agg_717$varInd_sd)
-shapiro.test(agg_717$varInd_iqr)
-shapiro.test(agg_717$tgi_mean)
-shapiro.test(agg_717$tgi_median)
-shapiro.test(agg_717$tgi_sd) # not normal
-agg_717$tgi_sd_ln <- transformTukey(agg_717$tgi_sd)
-shapiro.test(agg_717$tgi_iqr) # not normal
-agg_717$tgi_iqr_ln <- transformTukey(agg_717$tgi_iqr)
-
-# Check for normal distribution of dependent variables
-shapiro.test(agg_619$N)
-agg_619$N_ln <- transformTukey(agg_619$N)
-shapiro.test(agg_619$P)
-shapiro.test(agg_619$K)
-shapiro.test(agg_619$Mg)
-shapiro.test(agg_619$Ca)
-shapiro.test(agg_619$S)
-shapiro.test(agg_619$Zn)
-shapiro.test(agg_619$B)
-agg_619$B_ln <- transformTukey(agg_619$B)
-
-shapiro.test(agg_703$N)
-agg_703$N_ln <- transformTukey(agg_703$N)
-shapiro.test(agg_703$P)
-shapiro.test(agg_703$K)
-shapiro.test(agg_703$Mg)
-shapiro.test(agg_703$Ca)
-shapiro.test(agg_703$S)
-shapiro.test(agg_703$Zn)
-shapiro.test(agg_703$B)
-agg_703$B_ln <- transformTukey(agg_703$B)
-
-shapiro.test(agg_717$N)
-agg_717$N_ln <- transformTukey(agg_717$N)
-shapiro.test(agg_717$P)
-shapiro.test(agg_717$K)
-shapiro.test(agg_717$Mg)
-shapiro.test(agg_717$Ca)
-shapiro.test(agg_717$S)
-shapiro.test(agg_717$Zn)
-shapiro.test(agg_717$B)
-agg_717$B_ln <- transformTukey(agg_717$B)
-shapiro.test(agg_717$B_ln)
+# 
+# shapiro.test(agg_619$mean)
+# shapiro.test(agg_619$median)
+# shapiro.test(agg_619$sd)
+# shapiro.test(agg_619$iqr)
+# shapiro.test(agg_619$crrmedian)
+# shapiro.test(agg_619$crrmean)
+# shapiro.test(agg_619$crrsd) # not normal
+# agg_619$crrsd_ln <- transformTukey(agg_619$crrsd)
+# shapiro.test(agg_619$crriqr) # not normal
+# agg_619$crriqr_ln <- transformTukey(agg_619$crriqr)
+# shapiro.test(agg_619$skew)
+# shapiro.test(agg_619$kurt)
+# shapiro.test(agg_619$moran)
+# shapiro.test(agg_619$geary)
+# shapiro.test(agg_619$PlotCRR)
+# shapiro.test(agg_619$watersum) # not normal
+# agg_619$watersum_ln <- transformTukey(agg_619$watersum)
+# shapiro.test(agg_619$varInd_median)
+# shapiro.test(agg_619$varInd_mean)
+# shapiro.test(agg_619$varInd_sd) # not normal
+# agg_619$varInd_sd_ln <- transformTukey(agg_619$varInd_sd)
+# shapiro.test(agg_619$varInd_iqr)
+# shapiro.test(agg_619$tgi_mean) # not normal
+# agg_619$tgi_mean_ln <- transformTukey(agg_619$tgi_mean)
+# shapiro.test(agg_619$tgi_median) # not normal
+# agg_619$tgi_median_ln <- transformTukey(agg_619$tgi_median)
+# shapiro.test(agg_619$tgi_sd)
+# shapiro.test(agg_619$tgi_iqr)
+# 
+# shapiro.test(agg_703$mean)
+# shapiro.test(agg_703$median)
+# shapiro.test(agg_703$sd)
+# shapiro.test(agg_703$iqr) # not normal
+# agg_703$iqr_ln <- transformTukey(agg_703$iqr)
+# shapiro.test(agg_703$crrmedian)
+# shapiro.test(agg_703$crrmean)
+# shapiro.test(agg_703$crrsd)
+# shapiro.test(agg_703$crriqr)
+# shapiro.test(agg_703$skew)
+# shapiro.test(agg_703$kurt) # not normal
+# agg_703$kurt_ln <- transformTukey(agg_703$kurt)
+# shapiro.test(agg_703$moran)
+# shapiro.test(agg_703$geary)
+# shapiro.test(agg_703$PlotCRR)
+# shapiro.test(agg_703$watersum) # not normal
+# agg_703$watersum_ln <- transformTukey(agg_703$watersum)
+# shapiro.test(agg_703$varInd_median) # not normal
+# agg_703$varInd_median_ln <- transformTukey(agg_703$varInd_median)
+# shapiro.test(agg_703$varInd_mean) # not normal
+# agg_703$varInd_mean_ln <- transformTukey(agg_703$varInd_mean)
+# shapiro.test(agg_703$varInd_sd)
+# shapiro.test(agg_703$varInd_iqr)
+# shapiro.test(agg_703$tgi_mean) # not normal
+# agg_703$tgi_mean_ln <- transformTukey(agg_703$tgi_mean)
+# shapiro.test(agg_703$tgi_median) # not normal
+# agg_703$tgi_median_ln <- transformTukey(agg_703$tgi_median)
+# shapiro.test(agg_703$tgi_sd) # not normal
+# agg_703$tgi_sd_ln <- transformTukey(agg_703$tgi_sd)
+# shapiro.test(agg_703$tgi_iqr) # not normal
+# agg_703$tgi_iqr_ln <- transformTukey(agg_703$tgi_iqr)
+# 
+# shapiro.test(agg_717$mean)
+# shapiro.test(agg_717$median)
+# shapiro.test(agg_717$sd)
+# shapiro.test(agg_717$iqr)
+# shapiro.test(agg_717$crrmedian)
+# shapiro.test(agg_717$crrmean)
+# shapiro.test(agg_717$crrsd)
+# shapiro.test(agg_717$crriqr)
+# shapiro.test(agg_717$skew)
+# shapiro.test(agg_717$kurt) # not normal, cannot transform
+# shapiro.test(agg_717$moran)
+# shapiro.test(agg_717$geary) # not normal
+# agg_717$geary_ln <- transformTukey(agg_717$geary)
+# shapiro.test(agg_717$PlotCRR)
+# shapiro.test(agg_717$watersum) # not normal
+# agg_717$watersum_ln <- transformTukey(agg_717$watersum)
+# shapiro.test(agg_717$varInd_median) # not normal
+# agg_717$varInd_median_ln <- transformTukey(agg_717$varInd_median)
+# shapiro.test(agg_717$varInd_mean)
+# shapiro.test(agg_717$varInd_sd)
+# shapiro.test(agg_717$varInd_iqr)
+# shapiro.test(agg_717$tgi_mean)
+# shapiro.test(agg_717$tgi_median)
+# shapiro.test(agg_717$tgi_sd) # not normal
+# agg_717$tgi_sd_ln <- transformTukey(agg_717$tgi_sd)
+# shapiro.test(agg_717$tgi_iqr) # not normal
+# agg_717$tgi_iqr_ln <- transformTukey(agg_717$tgi_iqr)
+# 
+# # Check for normal distribution of dependent variables
+# shapiro.test(agg_619$N)
+# agg_619$N_ln <- transformTukey(agg_619$N)
+# shapiro.test(agg_619$P)
+# shapiro.test(agg_619$K)
+# shapiro.test(agg_619$Mg)
+# shapiro.test(agg_619$Ca)
+# shapiro.test(agg_619$S)
+# shapiro.test(agg_619$Zn)
+# shapiro.test(agg_619$B)
+# agg_619$B_ln <- transformTukey(agg_619$B)
+# 
+# shapiro.test(agg_703$N)
+# agg_703$N_ln <- transformTukey(agg_703$N)
+# shapiro.test(agg_703$P)
+# shapiro.test(agg_703$K)
+# shapiro.test(agg_703$Mg)
+# shapiro.test(agg_703$Ca)
+# shapiro.test(agg_703$S)
+# shapiro.test(agg_703$Zn)
+# shapiro.test(agg_703$B)
+# agg_703$B_ln <- transformTukey(agg_703$B)
+# 
+# shapiro.test(agg_717$N)
+# agg_717$N_ln <- transformTukey(agg_717$N)
+# shapiro.test(agg_717$P)
+# shapiro.test(agg_717$K)
+# shapiro.test(agg_717$Mg)
+# shapiro.test(agg_717$Ca)
+# shapiro.test(agg_717$S)
+# shapiro.test(agg_717$Zn)
+# shapiro.test(agg_717$B)
+# agg_717$B_ln <- transformTukey(agg_717$B)
+# shapiro.test(agg_717$B_ln)
 
 # ------------------------------------Plot variables ------------------------------------------
 library(ggpubr)
@@ -652,62 +631,44 @@ normalize <- function(x)
 
 
 #minmax normalization of data
-norm_619 <- as.data.frame(normalize(agg_619[,2:48]))
+norm_619 <- as.data.frame(normalize(agg_619[,2:40]))
 norm_619$Id <- agg_619$Group.1
 norm_619$treatment <- agg_619$treatment
 norm_619$fert <- agg_619$fert
 norm_619$soils <- agg_619$soils
 norm_619 <- dummy_cols(norm_619, select_columns = "soils")
 
-norm_703 <- as.data.frame(normalize(agg_703[,2:51]))
+norm_703 <- as.data.frame(normalize(agg_703[,2:40]))
 norm_703$Id <- agg_703$Group.1
 norm_703$treatment <- agg_703$treatment
 norm_703$fert <- agg_703$fert
 norm_703$soils <- agg_703$soils
 
-norm_717 <- as.data.frame(normalize(agg_717[,2:47]))
+norm_717 <- as.data.frame(normalize(agg_717[,2:40]))
 norm_717$Id <- agg_717$Group.1
 norm_717$treatment <- agg_717$treatment
 norm_717$fert <- agg_717$fert
 norm_717$soils <- agg_717$soils
 
-# ---------------------------------------- MANOVA ------------------------------------------------------
-med_619 <- norm_619$median
-moran_619 <- norm_619$moran
-crrmed_619 <- norm_619$crrmedian
-crriqr_619 <- norm_619$crriqr
-skew_619 <- norm_619$skew
-kurt_619 <- norm_619$kurt
-rumple_619 <- norm_619$rumple
+#z score normalization of data
+z_619 <- as.data.frame(scale(agg_619[,2:40]))
+z_619$Id <- agg_619$Group.1
+z_619$treatment <- agg_619$treatment
+z_619$fert <- agg_619$fert
+z_619$soils <- agg_619$soils
+z_619 <- dummy_cols(z_619, select_columns = "soils")
 
-norm_619$Treatment <- as.factor(norm_619$Treatment)
-man_619 <- manova(cbind(med_619, moran_619, crrmed_619, crriqr_619, skew_619, kurt_619, rumple_619)~Treatment, data=norm_619)
-summary(man_619)
-summary.aov(man_619)
+z_703 <- as.data.frame(normalize(agg_703[,2:40]))
+z_703$Id <- agg_703$Group.1
+z_703$treatment <- agg_703$treatment
+z_703$fert <- agg_703$fert
+z_703$soils <- agg_703$soils
 
-
-med_703 <- norm_703$median_ln
-moran_703 <- norm_703$moran_ln
-crrmed_703 <- norm_703$crrmedian_ln
-skew_703 <- norm_703$skew_ln
-kurt_703 <- norm_703$kurt_ln
-rumple_703 <- norm_703$rumple
-
-man_703 <- manova(cbind(med_703, moran_703, crrmed_703, skew_703, kurt_703, rumple_703)~Treatment, data=norm_703)
-summary(man_703)
-summary.aov(man_703)
-
-
-med_717 <- norm_717$median_ln
-moran_717 <- norm_717$moran_ln
-crrmed_717 <- norm_717$crrmedian_ln
-skew_717 <- norm_717$skew_ln
-kurt_717 <- norm_717$kurt_ln
-rumple_717 <- norm_717$rumple
-
-man_717 <- manova(cbind(med_717, moran_717, crrmed_717, skew_717, kurt_717, rumple_717)~Trt_agg, data=norm_717)
-summary(man_717)
-summary.aov(man_717)
+z_717 <- as.data.frame(normalize(agg_717[,2:40]))
+z_717$Id <- agg_717$Group.1
+z_717$treatment <- agg_717$treatment
+z_717$fert <- agg_717$fert
+z_717$soils <- agg_717$soils
 
 #---------------------------------------- LM structural only (partial mask) ------------------------------------------
 lmp <- function (modelobject) {
@@ -784,19 +745,26 @@ vif_func<-function(in_frame,thresh=10,trace=T,...){
   
 }
 
-xvar_619 <- agg_619[,16:40]
-xvar_703 <- agg_703[,16:40]
-xvar_717 <- agg_717[,16:40]
+xvar_619 <- norm_619[,15:39]
+xvar_703 <- norm_703[,15:39]
+xvar_717 <- norm_717[,15:39]
 
-xkeep_619 <- vif_func(xvar_619, 4, F)
-xkeep_703 <- vif_func(xvar_703, 4, F)
-xkeep_717 <- vif_func(xvar_717, 4, F)
+xkeep_all_619 <- vif_func(xvar_619, 4, F)
+xkeep_all_703 <- vif_func(xvar_703, 4, F)
+xkeep_all_717 <- vif_func(xvar_717, 4, F)
 
+xkeep_struct_619 <- xkeep_all_619[3:9]
+xkeep_spec_619 <- xkeep_all_619[1:2]
 
+xkeep_struct_703 <- xkeep_all_703[3:9]
+xkeep_spec_703 <- xkeep_all_703[1:2]
+
+xkeep_struct_717 <- xkeep_all_717[3:9]
+xkeep_spec_717 <- xkeep_all_717[1:2]
 
 yvar <- c("N","P","K","B","Ca","Mg","S","Zn")
 
-lm_spec_struc <- function(y, xkeep, data){
+lm_compare <- function(y, xkeep, data){
   xvars <- paste(xkeep,collapse='+')
   eq<-as.formula(paste(y, xvars, sep="~"))
   mod1<-lm(eq,data=data, na.action=na.fail)
@@ -808,2805 +776,80 @@ lm_spec_struc <- function(y, xkeep, data){
   res
 }
 
-spec_struc_619 <- lapply(yvar, lm_spec_struc, xkeep_619, norm_619)
+topmod_res <- function(y, xkeep, data){
+  xvars <- paste(xkeep,collapse='+')
+  eq<-as.formula(paste(y, xvars, sep="~"))
+  mod1<-lm(eq,data=data, na.action=na.fail)
+  modsel <- dredge(mod1)
+  topmod <- get.models(modsel, subset = 1)[[1]]
+  topmod
+}
+
+xvars_all_fixed <- c("tgi_mean","tgi_sd","watersum","crrmedian","crriqr","mean","kurt","rumple","moran","geary")
+xvars_spec_fixed <- xvars_all_fixed[1:2]
+xvars_struc_fixed <- xvars_all_fixed[3:10]
+
+# ---------------------------------- Structural LMs ----------------------------------------------
+struc_619 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_619)
+struc_619 <- do.call(rbind, lapply(struc_619, data.frame))
+struc_mods_619 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_619)
+
+struc_703 <- lapply(yvar, lm_compare, xkeep=xvars_struc_fixed, data=z_703)
+struc_703 <- do.call(rbind, lapply(struc_703, data.frame))
+struc_mods_703 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_703)
+
+struc_717 <- lapply(yvar, lm_compare, xkeep=xvars_struc_fixed, data=z_717)
+struc_717 <- do.call(rbind, lapply(struc_717, data.frame))
+struc_mods_717 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_717)
+
+# ---------------------------------- Spectral lm_compares ----------------------------------------------
+
+spec_619 <- lapply(yvar, lm_compare, xvars_spec_fixed, z_619)
+spec_619 <- do.call(rbind, lapply(spec_619, data.frame))
+spec_mods_619 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_619)
+
+spec_703 <- lapply(yvar, lm_compare, xvars_spec_fixed, z_703)
+spec_703 <- do.call(rbind, lapply(spec_703, data.frame))
+spec_mods_703 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_703)
+
+spec_717 <- lapply(yvar, lm_compare, xvars_spec_fixed, z_717)
+spec_717 <- do.call(rbind, lapply(spec_717, data.frame))
+spec_mods_717 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_717)
+
+# ---------------------------------- Structural and Spectral lm_compares ----------------------------------------------
+
+spec_struc_619 <- lapply(yvar, lm_compare, xvars_all_fixed, z_619)
 spec_struc_619 <- do.call(rbind, lapply(spec_struc_619, data.frame))
+spec_mods_619 <- lapply(yvar, topmod_res, xvars_all_fixed, z_619)
 
-spec_struc_703 <- lapply(yvar, lm_spec_struc, xkeep_703, norm_703)
+spec_struc_703 <- lapply(yvar, lm_compare, xvars_all_fixed, z_703)
 spec_struc_703 <- do.call(rbind, lapply(spec_struc_703, data.frame))
+spec_mods_703 <- lapply(yvar, topmod_res, xvars_all_fixed, z_703)
 
-spec_struc_717 <- lapply(yvar, lm_spec_struc, xkeep_717, norm_717)
+spec_struc_717 <- lapply(yvar, lm_compare, xvars_all_fixed, z_717)
 spec_struc_717 <- do.call(rbind, lapply(spec_struc_717, data.frame))
-
-lm_N_619 <- lm(N ~ mean+median+sd+iqr+crrmean+crrmedian+crrsd+crriqr+skew+kurt+geary+moran+rumple+watersum, data = norm_619, na.action=na.fail)
-vif(lm_N_619)
-modsel_N_619 <- dredge(lm_N_619, extra="adjR^2")
-topmod_N_619 <- lm(N ~ crrmedian+kurt+moran+geary+watersum, data = norm_616, na.action=na.fail)
-vif(topmod_N_619)
-summary(topmod_N_619)
-N_619_pred <- predict(topmod_N_619)
-N_619_res <- resid(topmod_N_619)
-n_619_table <- cbind(norm_619$N, N_619_pred, N_619_res)
-head(n_619_table)
-
-lm_P_619 <- lm(P ~ crrmedian+crriqr+kurt+rumple+moran+geary+watersum, data = norm_619[-c(5,6,7),], na.action=na.fail)
-summary(lm_P_619)
-vif(lm_P_619)
-modsel_P_619 <- dredge(lm_P_619)
-topmod_P_619 <- lm(P ~ crrmedian+geary+watersum, data = norm_619,na.action=na.fail)
-summary(topmod_P_619)
-
-lm_K_619 <- lm(K ~ crrmedian+crriqr+kurt+rumple+moran+geary+watersum, data = norm_619, na.action=na.fail)
-summary(lm_K_619)
-modsel_K_619 <- dredge(lm_K_619)
-topmod_K_619 <- lm(K ~ crrmedian+watersum, data = norm_619,na.action=na.fail)
-summary(topmod_K_619)
-
-lm_Ca_619 <- lm(Ca ~crrmedian+crriqr+kurt+rumple+moran+geary+watersum, data = norm_619, na.action=na.fail)
-summary(lm_Ca_619)
-modsel_Ca_619 <- dredge(lm_Ca_619)
-topmod_Ca_619 <- lm(Ca ~ crriqr+moran, data = norm_619,na.action=na.fail)
-summary(topmod_Ca_619)
-
-lm_S_619 <- lm(S ~ crrmedian+crriqr+kurt+rumple+moran+geary+watersum, data = norm_619, na.action=na.fail)
-summary(lm_S_619)
-modsel_S_619 <- dredge(lm_S_619)
-topmod_S_619 <- lm(S ~ crrmedian, data = norm_619,na.action=na.fail)
-summary(topmod_S_619)
-
-lm_B_619 <- lm(B ~ crrmedian+crriqr+kurt+rumple+moran+geary+watersum, data = norm_619, na.action=na.fail)
-summary(lm_B_619)
-modsel_B_619 <- dredge(lm_B_619)
-topmod_B_619 <- lm(B ~ geary+moran, data = norm_619,na.action=na.fail)
-vif(topmod_B_619)
-summary(topmod_B_619)
-
-lm_Zn_619 <- lm(Zn ~ crrmedian+crriqr+kurt+rumple+moran+geary+watersum, data = norm_619, na.action=na.fail)
-summary(lm_Zn_619)
-modsel_Zn_619 <- dredge(lm_Zn_619)
-topmod_Zn_619 <- lm(Zn ~ crrmedian, data = norm_619,na.action=na.fail)
-summary(topmod_Zn_619)
-
-lm_Mg_619 <- lm(Mg ~  crrmedian+crriqr+kurt+rumple+moran+geary+watersum, data = norm_619, na.action=na.fail)
-summary(lm_Mg_619)
-modsel_Mg_619 <- dredge(lm_Mg_619)
-topmod_Mg_619 <- lm(Mg ~ crrmedian+kurt+moran, data = norm_619,na.action=na.fail)
-summary(topmod_Mg_619)
-
-# function to get lm pvalue
-lmp <- function (modelobject) {
-  if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
-  f <- summary(modelobject)$fstatistic
-  p <- pf(f[1],f[2],f[3],lower.tail=F)
-  attributes(p) <- NULL
-  return(p)
-}
-
-res_N_619 <- as.data.frame(modsel_N_619[1])
-res_N_619$adj_r2 <- summary(topmod_N_619)$adj.r.squared
-res_N_619$pvalue <- lmp(topmod_N_619)
-
-res_P_619 <- as.data.frame(modsel_P_619[1])
-res_P_619$adj_r2 <- summary(topmod_P_619)$adj.r.squared
-res_P_619$pvalue <- lmp(topmod_P_619)
-
-res_K_619 <- as.data.frame(modsel_K_619[1])
-res_K_619$adj_r2 <- summary(topmod_K_619)$adj.r.squared
-res_K_619$pvalue <- lmp(topmod_K_619)
-
-res_B_619 <- as.data.frame(modsel_B_619[1])
-res_B_619$adj_r2 <- summary(topmod_B_619)$adj.r.squared
-res_B_619$pvalue <- lmp(topmod_B_619)
-
-res_Ca_619 <- as.data.frame(modsel_Ca_619[1])
-res_Ca_619$adj_r2 <- summary(topmod_Ca_619)$adj.r.squared
-res_Ca_619$pvalue <- lmp(topmod_Ca_619)
-
-res_Mg_619 <- as.data.frame(modsel_Mg_619[1])
-res_Mg_619$adj_r2 <- summary(topmod_Mg_619)$adj.r.squared
-res_Mg_619$pvalue <- lmp(topmod_Mg_619)
-
-res_S_619 <- as.data.frame(modsel_S_619[1])
-res_S_619$adj_r2 <- summary(topmod_S_619)$adj.r.squared
-res_S_619$pvalue <- lmp(topmod_S_619)
-
-res_Zn_619 <- as.data.frame(modsel_Zn_619[1])
-res_Zn_619$adj_r2 <- summary(topmod_Zn_619)$adj.r.squared
-res_Zn_619$pvalue <- lmp(topmod_Zn_619)
-
-res_619 <- rbind(res_N_619, res_P_619, res_K_619, res_B_619, res_Ca_619, res_Mg_619, res_S_619, res_Zn_619)
-res_619$dependent <- c("N", "P", "K", "B", "Ca", "Mg", "S", "Zn")
-write.csv(res_619, "results/res_struc_partialmask_619.csv")
-
-# --------------------------------------------- All variables ---------------------------------------------------------
-
-mean+median+sd+iqr+crrmean+crrmedian+crrsd+crriqr+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_median+tgi_sd+tgi_iqr+varInd_mean+varInd_median+varInd_sd+varInd_iqr
-
-#------------------------------------------- LM with spectral+structural --------------------------------------------------------
-lm_N_619 <- lm(N ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = agg_619, na.action=na.fail)
-vif(lm_N_619)
-modsel_N_619 <- dredge(lm_N_619)
-topmod_N_619 <- lm(N ~ kurt+tgi_iqr+tgi_mean+watersum, data = norm_619,na.action=na.fail)
-summary(topmod_N_619)
-N_619_pred <- predict(topmod_N_619)
-N_619_res <- resid(topmod_N_619)
-n_619_table <- cbind(norm_619$N, N_619_pred, N_619_res)
-head(n_619_table)
-
-lm_P_619 <- lm(P ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = norm_619, na.action=na.fail)
-summary(lm_P_619)
-modsel_P_619 <- dredge(lm_P_619)
-topmod_P_619 <- lm(P ~ geary+tgi_iqr+watersum, data = norm_619,na.action=na.fail)
-summary(topmod_P_619)
-
-lm_K_619 <- lm(K ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = norm_619, na.action=na.fail)
-summary(lm_K_619)
-modsel_K_619 <- dredge(lm_K_619)
-topmod_K_619 <- lm(K ~ tgi_median+watersum, data = norm_619,na.action=na.fail)
-summary(topmod_K_619)
-
-lm_Ca_619 <- lm(Ca ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = norm_619, na.action=na.fail)
-summary(lm_Ca_619)
-modsel_Ca_619 <- dredge(lm_Ca_619)
-topmod_Ca_619 <- lm(Ca ~ moran+crriqr, data = norm_619,na.action=na.fail)
-summary(topmod_Ca_619)
-
-lm_S_619 <- lm(S ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = norm_619, na.action=na.fail)
-summary(lm_S_619)
-modsel_S_619 <- dredge(lm_S_619)
-topmod_S_619 <- lm(S ~ geary+moran+tgi_iqr, data = norm_619,na.action=na.fail)
-summary(topmod_S_619)
-
-lm_B_619 <- lm(B ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = norm_619, na.action=na.fail)
-summary(lm_B_619)
-modsel_B_619 <- dredge(lm_B_619)
-topmod_B_619 <- lm(B ~ geary+moran, data = norm_619,na.action=na.fail)
-summary(topmod_B_619)
-
-lm_Zn_619 <- lm(Zn ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = norm_619, na.action=na.fail)
-summary(lm_Zn_619)
-modsel_Zn_619 <- dredge(lm_Zn_619)
-topmod_Zn_619 <- lm(Zn ~ rumple+tgi_median, data = norm_619,na.action=na.fail)
-summary(topmod_Zn_619)
-
-lm_Mg_619 <- lm(Mg ~ crrsd+skew+kurt+geary+moran+rumple+watersum+tgi_mean+tgi_iqr, data = norm_619, na.action=na.fail)
-summary(lm_Mg_619)
-modsel_Mg_619 <- dredge(lm_Mg_619)
-topmod_Mg_619 <- lm(Mg ~ crriqr+moran+tgi_median, data = norm_619,na.action=na.fail)
-summary(topmod_Mg_619)
-
-res_N_619 <- as.data.frame(modsel_N_619[1])
-res_N_619$adj_r2 <- summary(topmod_N_619)$adj.r.squared
-res_N_619$pvalue <- lmp(topmod_N_619)
-
-res_P_619 <- as.data.frame(modsel_P_619[1])
-res_P_619$adj_r2 <- summary(topmod_P_619)$adj.r.squared
-res_P_619$pvalue <- lmp(topmod_P_619)
-
-res_K_619 <- as.data.frame(modsel_K_619[1])
-res_K_619$adj_r2 <- summary(topmod_K_619)$adj.r.squared
-res_K_619$pvalue <- lmp(topmod_K_619)
-
-res_B_619 <- as.data.frame(modsel_B_619[1])
-res_B_619$adj_r2 <- summary(topmod_B_619)$adj.r.squared
-res_B_619$pvalue <- lmp(topmod_B_619)
-
-res_Ca_619 <- as.data.frame(modsel_Ca_619[1])
-res_Ca_619$adj_r2 <- summary(topmod_Ca_619)$adj.r.squared
-res_Ca_619$pvalue <- lmp(topmod_Ca_619)
-
-res_Mg_619 <- as.data.frame(modsel_Mg_619[1])
-res_Mg_619$adj_r2 <- summary(topmod_Mg_619)$adj.r.squared
-res_Mg_619$pvalue <- lmp(topmod_Mg_619)
-
-res_S_619 <- as.data.frame(modsel_S_619[1])
-res_S_619$adj_r2 <- summary(topmod_S_619)$adj.r.squared
-res_S_619$pvalue <- lmp(topmod_S_619)
-
-res_Zn_619 <- as.data.frame(modsel_Zn_619[1])
-res_Zn_619$adj_r2 <- summary(topmod_Zn_619)$adj.r.squared
-res_Zn_619$pvalue <- lmp(topmod_Zn_619)
-
-res_619_spectal <- rbind(res_N_619, res_P_619, res_K_619, res_B_619, res_Ca_619, res_Mg_619, res_S_619, res_Zn_619)
-res_619_spectal$dependent <- c("N", "P", "K", "B", "Ca", "Mg", "S", "Zn")
-write.csv(res_619_spectal, "results/res_619_spectral_struc.csv")
-
-#------------------------------------------- LM with spectral only --------------------------------------------------------
-lm_N_619 <- lm(N ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
-summary(lm_N_619)
-vif(lm_N_619)
-modsel_N_619 <- dredge(lm_N_619)
-topmod_N_619 <- lm(N ~ tgi_mean+tgi_iqr+watersum, data = norm_619,na.action=na.fail)
-summary(topmod_N_619)
-N_619_pred <- predict(topmod_N_619)
-N_619_res <- resid(topmod_N_619)
-n_619_table <- cbind(norm_619$N, N_619_pred, N_619_res)
-head(n_619_table)
-
-lm_P_619 <- lm(P ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
-summary(lm_P_619)
-modsel_P_619 <- dredge(lm_P_619)
-topmod_P_619 <- lm(P ~ tgi_iqr+watersum, data = norm_619,na.action=na.fail)
-summary(topmod_P_619)
-
-lm_K_619 <- lm(K ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
-summary(lm_K_619)
-modsel_K_619 <- dredge(lm_K_619)
-topmod_K_619 <- lm(K ~ tgi_mean+tgi_sd+watersum, data = norm_619,na.action=na.fail)
-summary(topmod_K_619)
-
-lm_Ca_619 <- lm(Ca ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
-summary(lm_Ca_619)
-modsel_Ca_619 <- dredge(lm_Ca_619)
-topmod_Ca_619 <- lm(Ca ~ watersum, data = norm_619,na.action=na.fail)
-summary(topmod_Ca_619)
-
-lm_S_619 <- lm(S ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
-summary(lm_S_619)
-modsel_S_619 <- dredge(lm_S_619)
-topmod_S_619 <- lm(S ~ tgi_mean, data = norm_619,na.action=na.fail)
-summary(topmod_S_619)
-
-lm_B_619 <- lm(B ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
-summary(lm_B_619)
-modsel_B_619 <- dredge(lm_B_619)
-topmod_B_619 <- lm(B ~ 1, data = norm_619,na.action=na.fail)
-summary(topmod_B_619)
-
-lm_Zn_619 <- lm(Zn ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
-summary(lm_Zn_619)
-modsel_Zn_619 <- dredge(lm_Zn_619)
-topmod_Zn_619 <- lm(Zn ~ tgi_iqr, data = norm_619,na.action=na.fail)
-summary(topmod_Zn_619)
-
-lm_Mg_619 <- lm(Mg ~ tgi_mean+tgi_sd+tgi_iqr+watersum, data = norm_619, na.action=na.fail)
-summary(lm_Mg_619)
-modsel_Mg_619 <- dredge(lm_Mg_619)
-topmod_Mg_619 <- lm(Mg ~ tgi_mean+watersum, data = norm_619,na.action=na.fail)
-summary(topmod_Mg_619)
-
-res_N_619 <- as.data.frame(modsel_N_619[1])
-res_N_619$adj_r2 <- summary(topmod_N_619)$adj.r.squared
-res_N_619$pvalue <- lmp(topmod_N_619)
-
-res_P_619 <- as.data.frame(modsel_P_619[1])
-res_P_619$adj_r2 <- summary(topmod_P_619)$adj.r.squared
-res_P_619$pvalue <- lmp(topmod_P_619)
-
-res_K_619 <- as.data.frame(modsel_K_619[1])
-res_K_619$adj_r2 <- summary(topmod_K_619)$adj.r.squared
-res_K_619$pvalue <- lmp(topmod_K_619)
-
-res_B_619 <- as.data.frame(modsel_B_619[1])
-res_B_619$adj_r2 <- summary(topmod_B_619)$adj.r.squared
-res_B_619$pvalue <- lmp(topmod_B_619)
-
-res_Ca_619 <- as.data.frame(modsel_Ca_619[1])
-res_Ca_619$adj_r2 <- summary(topmod_Ca_619)$adj.r.squared
-res_Ca_619$pvalue <- lmp(topmod_Ca_619)
-
-res_Mg_619 <- as.data.frame(modsel_Mg_619[1])
-res_Mg_619$adj_r2 <- summary(topmod_Mg_619)$adj.r.squared
-res_Mg_619$pvalue <- lmp(topmod_Mg_619)
-
-res_S_619 <- as.data.frame(modsel_S_619[1])
-res_S_619$adj_r2 <- summary(topmod_S_619)$adj.r.squared
-res_S_619$pvalue <- lmp(topmod_S_619)
-
-res_Zn_619 <- as.data.frame(modsel_Zn_619[1])
-res_Zn_619$adj_r2 <- summary(topmod_Zn_619)$adj.r.squared
-res_Zn_619$pvalue <- lmp(topmod_Zn_619)
-
-res_619_spectal <- rbind(res_N_619, res_P_619, res_K_619, res_Ca_619, res_Mg_619, res_S_619, res_Zn_619)
-res_619_spectal$dependent <- c("N", "P", "K", "Ca", "Mg", "S", "Zn")
-write.csv(res_619_spectal, "results/res_619_spectralOnly.csv")
-
-#---------------------------------------------------Repeat for 703 -----------------------------------------------
-lm_N_703 <- lm(N ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-vif(lm_N_703)
-modsel_N_703 <- dredge(lm_N_703)
-topmod_N_703 <- lm(N ~ moran+median, data = norm_703,na.action=na.fail)
-summary(topmod_N_703)
-N_703_pred <- predict(topmod_N_703)
-N_703_res <- resid(topmod_N_703)
-n_703_table <- cbind(norm_703$N, N_703_pred, N_703_res)
-head(n_703_table)
-
-lm_P_703 <- lm(P ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-summary(lm_P_703)
-modsel_P_703 <- dredge(lm_P_703)
-topmod_P_703 <- lm(P ~ median+crrmedian, data = norm_703,na.action=na.fail)
-summary(topmod_P_703)
-
-lm_K_703 <- lm(K ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-summary(lm_K_703)
-modsel_K_703 <- dredge(lm_K_703)
-topmod_K_703 <- lm(K ~ crrmedian, data = norm_703,na.action=na.fail)
-summary(topmod_K_703)
-
-lm_Ca_703 <- lm(Ca ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-summary(lm_Ca_703)
-modsel_Ca_703 <- dredge(lm_Ca_703)
-topmod_Ca_703 <- lm(Ca ~ watersum, data = norm_703,na.action=na.fail)
-summary(topmod_Ca_703)
-
-lm_S_703 <- lm(S ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-summary(lm_S_703)
-modsel_S_703 <- dredge(lm_S_703)
-topmod_S_703 <- lm(S ~ crrmedian+rumple, data = norm_703,na.action=na.fail)
-summary(topmod_S_703)
-
-lm_B_703 <- lm(B ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-summary(lm_B_703)
-modsel_B_703 <- dredge(lm_B_703)
-topmod_B_703 <- lm(B ~ crrmedian+moran+rumple+watersum, data = norm_703,na.action=na.fail)
-summary(topmod_B_703)
-
-lm_Zn_703 <- lm(Zn ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-summary(lm_Zn_703)
-modsel_Zn_703 <- dredge(lm_Zn_703)
-topmod_Zn_703 <- lm(Zn ~ 1, data = norm_703,na.action=na.fail)
-summary(topmod_Zn_703)
-
-lm_Mg_703 <- lm(Mg ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-summary(lm_Mg_703)
-modsel_Mg_703 <- dredge(lm_Mg_703)
-topmod_Mg_703 <- lm(Mg ~ 1, data = norm_703,na.action=na.fail)
-summary(topmod_Mg_703)
-
-# function to get lm pvalue
-lmp <- function (modelobject) {
-  if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
-  f <- summary(modelobject)$fstatistic
-  p <- pf(f[1],f[2],f[3],lower.tail=F)
-  attributes(p) <- NULL
-  return(p)
-}
-
-res_N_703 <- as.data.frame(modsel_N_703[1])
-res_N_703$adj_r2 <- summary(topmod_N_703)$adj.r.squared
-res_N_703$pvalue <- lmp(topmod_N_703)
-
-res_P_703 <- as.data.frame(modsel_P_703[1])
-res_P_703$adj_r2 <- summary(topmod_P_703)$adj.r.squared
-res_P_703$pvalue <- lmp(topmod_P_703)
-
-res_K_703 <- as.data.frame(modsel_K_703[1])
-res_K_703$adj_r2 <- summary(topmod_K_703)$adj.r.squared
-res_K_703$pvalue <- lmp(topmod_K_703)
-
-res_B_703 <- as.data.frame(modsel_B_703[1])
-res_B_703$adj_r2 <- summary(topmod_B_703)$adj.r.squared
-res_B_703$pvalue <- lmp(topmod_B_703)
-
-res_Ca_703 <- as.data.frame(modsel_Ca_703[1])
-res_Ca_703$adj_r2 <- summary(topmod_Ca_703)$adj.r.squared
-res_Ca_703$pvalue <- lmp(topmod_Ca_703)
-
-res_Mg_703 <- as.data.frame(modsel_Mg_703[1])
-res_Mg_703$adj_r2 <- summary(topmod_Mg_703)$adj.r.squared
-res_Mg_703$pvalue <- lmp(topmod_Mg_703)
-
-res_S_703 <- as.data.frame(modsel_S_703[1])
-res_S_703$adj_r2 <- summary(topmod_S_703)$adj.r.squared
-res_S_703$pvalue <- lmp(topmod_S_703)
-
-res_Zn_703 <- as.data.frame(modsel_Zn_703[1])
-res_Zn_703$adj_r2 <- summary(topmod_Zn_703)$adj.r.squared
-res_Zn_703$pvalue <- lmp(topmod_Zn_703)
-
-res_703 <- rbind(res_N_703, res_P_703, res_K_703, res_B_703, res_Ca_703, res_S_703)
-res_703$dependent <- c("N", "P", "K", "B", "Ca", "S")
-write.csv(res_703, "results/res_struct_703.csv")
-
-#------------------------------------------- LM with spectral and structural --------------------------------------------------------
-lm_N_703 <- lm(N ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-vif(lm_N_703)
-modsel_N_703 <- dredge(lm_N_703)
-topmod_N_703 <- lm(N ~ kurt+sd+tgi_median+watersum, data = norm_703,na.action=na.fail)
-summary(topmod_N_703)
-N_703_pred <- predict(topmod_N_703)
-N_703_res <- resid(topmod_N_703)
-n_703_table <- cbind(norm_703$N, N_703_pred, N_703_res)
-head(n_703_table)
-
-lm_P_703 <- lm(P ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-summary(lm_P_703)
-modsel_P_703 <- dredge(lm_P_703)
-topmod_P_703 <- lm(P ~ sd, data = norm_703,na.action=na.fail)
-summary(topmod_P_703)
-
-lm_K_703 <- lm(K ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-summary(lm_K_703)
-modsel_K_703 <- dredge(lm_K_703)
-topmod_K_703 <- lm(K ~ tgi_median, data = norm_703,na.action=na.fail)
-summary(topmod_K_703)
-
-lm_Ca_703 <- lm(Ca ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-summary(lm_Ca_703)
-modsel_Ca_703 <- dredge(lm_Ca_703)
-topmod_Ca_703 <- lm(Ca ~ watersum, data = norm_703,na.action=na.fail)
-summary(topmod_Ca_703)
-
-lm_S_703 <- lm(S ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-summary(lm_S_703)
-modsel_S_703 <- dredge(lm_S_703)
-topmod_S_703 <- lm(S ~ sd+tgi_median, data = norm_703,na.action=na.fail)
-summary(topmod_S_703)
-
-lm_B_703 <- lm(B ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-summary(lm_B_703)
-modsel_B_703 <- dredge(lm_B_703)
-topmod_B_703 <- lm(B ~ sd+tgi_median, data = norm_703,na.action=na.fail)
-summary(topmod_B_703)
-
-lm_Zn_703 <- lm(Zn ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-summary(lm_Zn_703)
-modsel_Zn_703 <- dredge(lm_Zn_703)
-topmod_Zn_703 <- lm(Zn ~ 1, data = norm_703,na.action=na.fail)
-summary(topmod_Zn_703)
-
-lm_Mg_703 <- lm(Mg ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-summary(lm_Mg_703)
-modsel_Mg_703 <- dredge(lm_Mg_703)
-topmod_Mg_703 <- lm(Mg ~ tgi_sd, data = norm_703,na.action=na.fail)
-summary(topmod_Mg_703)
-
-res_N_703 <- as.data.frame(modsel_N_703[1])
-res_N_703$adj_r2 <- summary(topmod_N_703)$adj.r.squared
-res_N_703$pvalue <- lmp(topmod_N_703)
-
-res_P_703 <- as.data.frame(modsel_P_703[1])
-res_P_703$adj_r2 <- summary(topmod_P_703)$adj.r.squared
-res_P_703$pvalue <- lmp(topmod_P_703)
-
-res_K_703 <- as.data.frame(modsel_K_703[1])
-res_K_703$adj_r2 <- summary(topmod_K_703)$adj.r.squared
-res_K_703$pvalue <- lmp(topmod_K_703)
-
-res_B_703 <- as.data.frame(modsel_B_703[1])
-res_B_703$adj_r2 <- summary(topmod_B_703)$adj.r.squared
-res_B_703$pvalue <- lmp(topmod_B_703)
-
-res_Ca_703 <- as.data.frame(modsel_Ca_703[1])
-res_Ca_703$adj_r2 <- summary(topmod_Ca_703)$adj.r.squared
-res_Ca_703$pvalue <- lmp(topmod_Ca_703)
-
-res_Mg_703 <- as.data.frame(modsel_Mg_703[1])
-res_Mg_703$adj_r2 <- summary(topmod_Mg_703)$adj.r.squared
-res_Mg_703$pvalue <- lmp(topmod_Mg_703)
-
-res_S_703 <- as.data.frame(modsel_S_703[1])
-res_S_703$adj_r2 <- summary(topmod_S_703)$adj.r.squared
-res_S_703$pvalue <- lmp(topmod_S_703)
-
-res_Zn_703 <- as.data.frame(modsel_Zn_703[1])
-res_Zn_703$adj_r2 <- summary(topmod_Zn_703)$adj.r.squared
-res_Zn_703$pvalue <- lmp(topmod_Zn_703)
-
-res_703_spec_struc <- rbind(res_N_703, res_P_703, res_K_703, res_B_703, res_Ca_703, res_Mg_703, res_S_703)
-res_703_spec_struc$dependent <- c("N", "P", "K", "B", "Ca", "Mg", "S")
-write.csv(res_703_spec_struc, "results/res_703_spec_struc.csv")
-
-
-#------------------------------------------- LM with spectral only --------------------------------------------------------
-lm_N_703 <- lm(N ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-vif(lm_N_703)
-modsel_N_703 <- dredge(lm_N_703)
-topmod_N_703 <- lm(N ~ tgi_mean, data = norm_703,na.action=na.fail)
-summary(topmod_N_703)
-N_703_pred <- predict(topmod_N_703)
-N_703_res <- resid(topmod_N_703)
-n_703_table <- cbind(norm_703$N, N_703_pred, N_703_res)
-head(n_703_table)
-
-lm_P_703 <- lm(P ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-summary(lm_P_703)
-modsel_P_703 <- dredge(lm_P_703)
-topmod_P_703 <- lm(P ~ 1, data = norm_703,na.action=na.fail)
-summary(topmod_P_703)
-
-lm_K_703 <- lm(K ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-summary(lm_K_703)
-modsel_K_703 <- dredge(lm_K_703)
-topmod_K_703 <- lm(K ~ tgi_mean, data = norm_703,na.action=na.fail)
-summary(topmod_K_703)
-
-lm_Ca_703 <- lm(Ca ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-summary(lm_Ca_703)
-modsel_Ca_703 <- dredge(lm_Ca_703)
-topmod_Ca_703 <- lm(Ca ~ watersum, data = norm_703,na.action=na.fail)
-summary(topmod_Ca_703)
-
-lm_S_703 <- lm(S ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-summary(lm_S_703)
-modsel_S_703 <- dredge(lm_S_703)
-topmod_S_703 <- lm(S ~ tgi_mean, data = norm_703,na.action=na.fail)
-summary(topmod_S_703)
-
-lm_B_703 <- lm(B ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-summary(lm_B_703)
-modsel_B_703 <- dredge(lm_B_703)
-topmod_B_703 <- lm(B ~ 1, data = norm_703,na.action=na.fail)
-summary(topmod_B_703)
-
-lm_Zn_703 <- lm(Zn ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-summary(lm_Zn_703)
-modsel_Zn_703 <- dredge(lm_Zn_703)
-topmod_Zn_703 <- lm(Zn ~ 1, data = norm_703,na.action=na.fail)
-summary(topmod_Zn_703)
-
-lm_Mg_703 <- lm(Mg ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-summary(lm_Mg_703)
-modsel_Mg_703 <- dredge(lm_Mg_703)
-topmod_Mg_703 <- lm(Mg ~ tgi_sd, data = norm_703,na.action=na.fail)
-summary(topmod_Mg_703)
-
-res_N_703 <- as.data.frame(modsel_N_703[1])
-res_N_703$adj_r2 <- summary(topmod_N_703)$adj.r.squared
-res_N_703$pvalue <- lmp(topmod_N_703)
-
-res_P_703 <- as.data.frame(modsel_P_703[1])
-res_P_703$adj_r2 <- summary(topmod_P_703)$adj.r.squared
-res_P_703$pvalue <- lmp(topmod_P_703)
-
-res_K_703 <- as.data.frame(modsel_K_703[1])
-res_K_703$adj_r2 <- summary(topmod_K_703)$adj.r.squared
-res_K_703$pvalue <- lmp(topmod_K_703)
-
-res_B_703 <- as.data.frame(modsel_B_703[1])
-res_B_703$adj_r2 <- summary(topmod_B_703)$adj.r.squared
-res_B_703$pvalue <- lmp(topmod_B_703)
-
-res_Ca_703 <- as.data.frame(modsel_Ca_703[1])
-res_Ca_703$adj_r2 <- summary(topmod_Ca_703)$adj.r.squared
-res_Ca_703$pvalue <- lmp(topmod_Ca_703)
-
-res_Mg_703 <- as.data.frame(modsel_Mg_703[1])
-res_Mg_703$adj_r2 <- summary(topmod_Mg_703)$adj.r.squared
-res_Mg_703$pvalue <- lmp(topmod_Mg_703)
-
-res_S_703 <- as.data.frame(modsel_S_703[1])
-res_S_703$adj_r2 <- summary(topmod_S_703)$adj.r.squared
-res_S_703$pvalue <- lmp(topmod_S_703)
-
-res_Zn_703 <- as.data.frame(modsel_Zn_703[1])
-res_Zn_703$adj_r2 <- summary(topmod_Zn_703)$adj.r.squared
-res_Zn_703$pvalue <- lmp(topmod_Zn_703)
-
-res_703_spectal <- rbind(res_N_703, res_K_703, res_Ca_703, res_Mg_703, res_S_703)
-res_703_spectal$dependent <- c("N", "K", "Ca", "Mg", "S")
-write.csv(res_703_spectal, "results/res_703_spectralOnly.csv")
-
-
-#---------------------------------------------------Repeat for 717 -----------------------------------------------
-
-lm_N_717 <- lm(N ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-vif(lm_N_717)
-modsel_N_717 <- dredge(lm_N_717)
-topmod_N_717 <- lm(N ~ sd+crrsd+kurt+mean, data = norm_717,na.action=na.fail)
-summary(topmod_N_717)
-N_717_pred <- predict(topmod_N_717)
-N_717_res <- resid(topmod_N_717)
-n_717_table <- cbind(norm_717$N, N_717_pred, N_717_res)
-head(n_717_table)
-
-lm_P_717 <- lm(P ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-summary(lm_P_717)
-modsel_P_717 <- dredge(lm_P_717)
-topmod_P_717 <- lm(P ~ mean, data = norm_717,na.action=na.fail)
-summary(topmod_P_717)
-
-lm_K_717 <- lm(K ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-summary(lm_K_717)
-modsel_K_717 <- dredge(lm_K_717)
-topmod_K_717 <- lm(K ~ crrmedian+crrsd, data = norm_717,na.action=na.fail)
-summary(topmod_K_717)
-
-lm_Ca_717 <- lm(Ca ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-summary(lm_Ca_717)
-modsel_Ca_717 <- dredge(lm_Ca_717)
-topmod_Ca_717 <- lm(Ca ~ crrmedian+kurt, data = norm_717,na.action=na.fail)
-summary(topmod_Ca_717)
-
-lm_S_717 <- lm(S ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-summary(lm_S_717)
-modsel_S_717 <- dredge(lm_S_717)
-topmod_S_717 <- lm(S ~ mean, data = norm_717,na.action=na.fail)
-summary(topmod_S_717)
-
-lm_B_717 <- lm(B ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-summary(lm_B_717)
-modsel_B_717 <- dredge(lm_B_717)
-topmod_B_717 <- lm(B ~ crrmedian+sd, data = norm_717,na.action=na.fail)
-summary(topmod_B_717)
-
-lm_Zn_717 <- lm(Zn ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-summary(lm_Zn_717)
-modsel_Zn_717 <- dredge(lm_Zn_717)
-topmod_Zn_717 <- lm(Zn ~ kurt, data = norm_717,na.action=na.fail)
-summary(topmod_Zn_717)
-
-lm_Mg_717 <- lm(Mg ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-summary(lm_Mg_717)
-modsel_Mg_717 <- dredge(lm_Mg_717)
-topmod_Mg_717 <- lm(Mg ~ kurt, data = norm_717,na.action=na.fail)
-summary(topmod_Mg_717)
-
-# function to get lm pvalue
-lmp <- function (modelobject) {
-  if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
-  f <- summary(modelobject)$fstatistic
-  p <- pf(f[1],f[2],f[3],lower.tail=F)
-  attributes(p) <- NULL
-  return(p)
-}
-
-res_N_717 <- as.data.frame(modsel_N_717[1])
-res_N_717$adj_r2 <- summary(topmod_N_717)$adj.r.squared
-res_N_717$pvalue <- lmp(topmod_N_717)
-
-res_P_717 <- as.data.frame(modsel_P_717[1])
-res_P_717$adj_r2 <- summary(topmod_P_717)$adj.r.squared
-res_P_717$pvalue <- lmp(topmod_P_717)
-
-res_K_717 <- as.data.frame(modsel_K_717[1])
-res_K_717$adj_r2 <- summary(topmod_K_717)$adj.r.squared
-res_K_717$pvalue <- lmp(topmod_K_717)
-
-res_B_717 <- as.data.frame(modsel_B_717[1])
-res_B_717$adj_r2 <- summary(topmod_B_717)$adj.r.squared
-res_B_717$pvalue <- lmp(topmod_B_717)
-
-res_Ca_717 <- as.data.frame(modsel_Ca_717[1])
-res_Ca_717$adj_r2 <- summary(topmod_Ca_717)$adj.r.squared
-res_Ca_717$pvalue <- lmp(topmod_Ca_717)
-
-res_Mg_717 <- as.data.frame(modsel_Mg_717[1])
-res_Mg_717$adj_r2 <- summary(topmod_Mg_717)$adj.r.squared
-res_Mg_717$pvalue <- lmp(topmod_Mg_717)
-
-res_S_717 <- as.data.frame(modsel_S_717[1])
-res_S_717$adj_r2 <- summary(topmod_S_717)$adj.r.squared
-res_S_717$pvalue <- lmp(topmod_S_717)
-
-res_Zn_717 <- as.data.frame(modsel_Zn_717[1])
-res_Zn_717$adj_r2 <- summary(topmod_Zn_717)$adj.r.squared
-res_Zn_717$pvalue <- lmp(topmod_Zn_717)
-
-res_717 <- rbind(res_N_717, res_P_717, res_K_717, res_B_717, res_Ca_717, res_Mg_717, res_S_717, res_Zn_717)
-res_717$dependent <- c("N", "P", "K", "B", "Ca", "Mg", "S", "Zn")
-write.csv(res_717, "results/res_717_struc.csv")
-
-#------------------------------------------- LM spectral and structural --------------------------------------------------------
-
-lm_N_717 <- lm(N ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-vif(lm_N_717)
-modsel_N_717 <- dredge(lm_N_717)
-topmod_N_717 <- lm(N ~ tgi_median+tgi_sd, data = norm_717,na.action=na.fail)
-summary(topmod_N_717)
-N_717_pred <- predict(topmod_N_717)
-N_717_res <- resid(topmod_N_717)
-n_717_table <- cbind(norm_717$N, N_717_pred, N_717_res)
-head(n_717_table)
-
-lm_P_717 <- lm(P ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-summary(lm_P_717)
-modsel_P_717 <- dredge(lm_P_717)
-topmod_P_717 <- lm(P ~ 1, data = norm_717,na.action=na.fail)
-summary(topmod_P_717)
-
-lm_K_717 <- lm(K ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-summary(lm_K_717)
-modsel_K_717 <- dredge(lm_K_717)
-topmod_K_717 <- lm(K ~ crrmedian+tgi_sd, data = norm_717,na.action=na.fail)
-summary(topmod_K_717)
-
-lm_Ca_717 <- lm(Ca ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-summary(lm_Ca_717)
-modsel_Ca_717 <- dredge(lm_Ca_717)
-topmod_Ca_717 <- lm(Ca ~ crrmedian+kurt, data = norm_717,na.action=na.fail)
-summary(topmod_Ca_717)
-
-lm_S_717 <- lm(S ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-summary(lm_S_717)
-modsel_S_717 <- dredge(lm_S_717)
-topmod_S_717 <- lm(S ~ tgi_sd, data = norm_717,na.action=na.fail)
-summary(topmod_S_717)
-
-lm_B_717 <- lm(B ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-summary(lm_B_717)
-modsel_B_717 <- dredge(lm_B_717)
-topmod_B_717 <- lm(B ~ crrmedian+sd, data = norm_717,na.action=na.fail)
-summary(topmod_B_717)
-
-lm_Zn_717 <- lm(Zn ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-summary(lm_Zn_717)
-modsel_Zn_717 <- dredge(lm_Zn_717)
-topmod_Zn_717 <- lm(Zn ~ kurt, data = norm_717,na.action=na.fail)
-summary(topmod_Zn_717)
-
-lm_Mg_717 <- lm(Mg ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-summary(lm_Mg_717)
-modsel_Mg_717 <- dredge(lm_Mg_717)
-topmod_Mg_717 <- lm(Mg ~ tgi_median, data = norm_717,na.action=na.fail)
-summary(topmod_Mg_717)
-
-res_N_717 <- as.data.frame(modsel_N_717[1])
-res_N_717$adj_r2 <- summary(topmod_N_717)$adj.r.squared
-res_N_717$pvalue <- lmp(topmod_N_717)
-
-res_P_717 <- as.data.frame(modsel_P_717[1])
-res_P_717$adj_r2 <- summary(topmod_P_717)$adj.r.squared
-res_P_717$pvalue <- lmp(topmod_P_717)
-
-res_K_717 <- as.data.frame(modsel_K_717[1])
-res_K_717$adj_r2 <- summary(topmod_K_717)$adj.r.squared
-res_K_717$pvalue <- lmp(topmod_K_717)
-
-res_B_717 <- as.data.frame(modsel_B_717[1])
-res_B_717$adj_r2 <- summary(topmod_B_717)$adj.r.squared
-res_B_717$pvalue <- lmp(topmod_B_717)
-
-res_Ca_717 <- as.data.frame(modsel_Ca_717[1])
-res_Ca_717$adj_r2 <- summary(topmod_Ca_717)$adj.r.squared
-res_Ca_717$pvalue <- lmp(topmod_Ca_717)
-
-res_Mg_717 <- as.data.frame(modsel_Mg_717[1])
-res_Mg_717$adj_r2 <- summary(topmod_Mg_717)$adj.r.squared
-res_Mg_717$pvalue <- lmp(topmod_Mg_717)
-
-res_S_717 <- as.data.frame(modsel_S_717[1])
-res_S_717$adj_r2 <- summary(topmod_S_717)$adj.r.squared
-res_S_717$pvalue <- lmp(topmod_S_717)
-
-res_Zn_717 <- as.data.frame(modsel_Zn_717[1])
-res_Zn_717$adj_r2 <- summary(topmod_Zn_717)$adj.r.squared
-res_Zn_717$pvalue <- lmp(topmod_Zn_717)
-
-res_717_spec_struc <- rbind(res_N_717, res_K_717, res_B_717, res_Ca_717, res_Mg_717, res_S_717, res_Zn_717)
-res_717_spec_struc$dependent <- c("N", "K", "B", "Ca", "Mg", "S", "Zn")
-write.csv(res_717_spec_struc, "results/res_717_spec_struc.csv")
-
-#------------------------------------------- LM with spectral only --------------------------------------------------------
-lm_N_717 <- lm(N ~ tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-vif(lm_N_717)
-modsel_N_717 <- dredge(lm_N_717)
-topmod_N_717 <- lm(N ~ tgi_mean+tgi_iqr, data = norm_717,na.action=na.fail)
-summary(topmod_N_717)
-N_717_pred <- predict(topmod_N_717)
-N_717_res <- resid(topmod_N_717)
-n_717_table <- cbind(norm_717$N, N_717_pred, N_717_res)
-head(n_717_table)
-
-lm_P_717 <- lm(P ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-summary(lm_P_717)
-modsel_P_717 <- dredge(lm_P_717)
-topmod_P_717 <- lm(P ~ 1, data = norm_717,na.action=na.fail)
-summary(topmod_P_717)
-
-lm_K_717 <- lm(K ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-summary(lm_K_717)
-modsel_K_717 <- dredge(lm_K_717)
-topmod_K_717 <- lm(K ~ tgi_iqr, data = norm_717,na.action=na.fail)
-summary(topmod_K_717)
-
-lm_Ca_717 <- lm(Ca ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-summary(lm_Ca_717)
-modsel_Ca_717 <- dredge(lm_Ca_717)
-topmod_Ca_717 <- lm(Ca ~ watersum, data = norm_717,na.action=na.fail)
-summary(topmod_Ca_717)
-
-lm_S_717 <- lm(S ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-summary(lm_S_717)
-modsel_S_717 <- dredge(lm_S_717)
-topmod_S_717 <- lm(S ~ tgi_iqr, data = norm_717,na.action=na.fail)
-summary(topmod_S_717)
-
-lm_B_717 <- lm(B ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-summary(lm_B_717)
-modsel_B_717 <- dredge(lm_B_717)
-topmod_B_717 <- lm(B ~ 1, data = norm_717,na.action=na.fail)
-summary(topmod_B_717)
-
-lm_Zn_717 <- lm(Zn ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-summary(lm_Zn_717)
-modsel_Zn_717 <- dredge(lm_Zn_717)
-topmod_Zn_717 <- lm(Zn ~ 1, data = norm_717,na.action=na.fail)
-summary(topmod_Zn_717)
-
-lm_Mg_717 <- lm(Mg ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-summary(lm_Mg_717)
-modsel_Mg_717 <- dredge(lm_Mg_717)
-topmod_Mg_717 <- lm(Mg ~ tgi_mean, data = norm_717,na.action=na.fail)
-summary(topmod_Mg_717)
-
-res_N_717 <- as.data.frame(modsel_N_717[1])
-res_N_717$adj_r2 <- summary(topmod_N_717)$adj.r.squared
-res_N_717$pvalue <- lmp(topmod_N_717)
-
-res_P_717 <- as.data.frame(modsel_P_717[1])
-res_P_717$adj_r2 <- summary(topmod_P_717)$adj.r.squared
-res_P_717$pvalue <- lmp(topmod_P_717)
-
-res_K_717 <- as.data.frame(modsel_K_717[1])
-res_K_717$adj_r2 <- summary(topmod_K_717)$adj.r.squared
-res_K_717$pvalue <- lmp(topmod_K_717)
-
-res_B_717 <- as.data.frame(modsel_B_717[1])
-res_B_717$adj_r2 <- summary(topmod_B_717)$adj.r.squared
-res_B_717$pvalue <- lmp(topmod_B_717)
-
-res_Ca_717 <- as.data.frame(modsel_Ca_717[1])
-res_Ca_717$adj_r2 <- summary(topmod_Ca_717)$adj.r.squared
-res_Ca_717$pvalue <- lmp(topmod_Ca_717)
-
-res_Mg_717 <- as.data.frame(modsel_Mg_717[1])
-res_Mg_717$adj_r2 <- summary(topmod_Mg_717)$adj.r.squared
-res_Mg_717$pvalue <- lmp(topmod_Mg_717)
-
-res_S_717 <- as.data.frame(modsel_S_717[1])
-res_S_717$adj_r2 <- summary(topmod_S_717)$adj.r.squared
-res_S_717$pvalue <- lmp(topmod_S_717)
-
-res_Zn_717 <- as.data.frame(modsel_Zn_717[1])
-res_Zn_717$adj_r2 <- summary(topmod_Zn_717)$adj.r.squared
-res_Zn_717$pvalue <- lmp(topmod_Zn_717)
-
-res_717_spectal <- rbind(res_N_717, res_K_717, res_Ca_717, res_Mg_717, res_S_717)
-res_717_spectal$dependent <- c("N", "K", "Ca", "Mg", "S")
-write.csv(res_717_spectal, "results/res_717_spectralOnly.csv")
-
-
-#---------------------------------------------------Use first nutrient data for 703 and 717 -----------------------------------------------
-# ----------------------------------------- 703 struct only -------------------------------------
-lm_N_703 <- lm(N ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-vif(lm_N_703)
-modsel_N_703 <- dredge(lm_N_703)
-topmod_N_703 <- lm(N ~ moran+median+watersum, data = norm_703,na.action=na.fail)
-summary(topmod_N_703)
-N_703_pred <- predict(topmod_N_703)
-N_703_res <- resid(topmod_N_703)
-n_703_table <- cbind(norm_703$N, N_703_pred, N_703_res)
-head(n_703_table)
-
-lm_P_703 <- lm(P ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-summary(lm_P_703)
-modsel_P_703 <- dredge(lm_P_703)
-topmod_P_703 <- lm(P ~ median+moran+watersum, data = norm_703,na.action=na.fail)
-summary(topmod_P_703)
-
-lm_K_703 <- lm(K ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-summary(lm_K_703)
-modsel_K_703 <- dredge(lm_K_703)
-topmod_K_703 <- lm(K ~ crrmedian, data = norm_703,na.action=na.fail)
-summary(topmod_K_703)
-
-lm_Ca_703 <- lm(Ca ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-summary(lm_Ca_703)
-modsel_Ca_703 <- dredge(lm_Ca_703)
-topmod_Ca_703 <- lm(Ca ~ crrmedian+moran+watersum, data = norm_703,na.action=na.fail)
-summary(topmod_Ca_703)
-
-lm_S_703 <- lm(S ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-summary(lm_S_703)
-modsel_S_703 <- dredge(lm_S_703)
-topmod_S_703 <- lm(S ~ crrmedian+rumple, data = norm_703,na.action=na.fail)
-summary(topmod_S_703)
-
-lm_B_703 <- lm(B ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-summary(lm_B_703)
-modsel_B_703 <- dredge(lm_B_703)
-topmod_B_703 <- lm(B ~ crrmedian+rumple, data = norm_703,na.action=na.fail)
-summary(topmod_B_703)
-
-lm_Zn_703 <- lm(Zn ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-summary(lm_Zn_703)
-modsel_Zn_703 <- dredge(lm_Zn_703)
-topmod_Zn_703 <- lm(Zn ~ crrmedian+median, data = norm_703,na.action=na.fail)
-summary(topmod_Zn_703)
-
-lm_Mg_703 <- lm(Mg ~ median+crrmedian+crrsd+kurt+moran+rumple+watersum, data = norm_703, na.action=na.fail)
-summary(lm_Mg_703)
-modsel_Mg_703 <- dredge(lm_Mg_703)
-topmod_Mg_703 <- lm(Mg ~ median+moran+watersum, data = norm_703,na.action=na.fail)
-summary(topmod_Mg_703)
-
-# function to get lm pvalue
-lmp <- function (modelobject) {
-  if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
-  f <- summary(modelobject)$fstatistic
-  p <- pf(f[1],f[2],f[3],lower.tail=F)
-  attributes(p) <- NULL
-  return(p)
-}
-
-res_N_703 <- as.data.frame(modsel_N_703[1])
-res_N_703$adj_r2 <- summary(topmod_N_703)$adj.r.squared
-res_N_703$pvalue <- lmp(topmod_N_703)
-
-res_P_703 <- as.data.frame(modsel_P_703[1])
-res_P_703$adj_r2 <- summary(topmod_P_703)$adj.r.squared
-res_P_703$pvalue <- lmp(topmod_P_703)
-
-res_K_703 <- as.data.frame(modsel_K_703[1])
-res_K_703$adj_r2 <- summary(topmod_K_703)$adj.r.squared
-res_K_703$pvalue <- lmp(topmod_K_703)
-
-res_B_703 <- as.data.frame(modsel_B_703[1])
-res_B_703$adj_r2 <- summary(topmod_B_703)$adj.r.squared
-res_B_703$pvalue <- lmp(topmod_B_703)
-
-res_Ca_703 <- as.data.frame(modsel_Ca_703[1])
-res_Ca_703$adj_r2 <- summary(topmod_Ca_703)$adj.r.squared
-res_Ca_703$pvalue <- lmp(topmod_Ca_703)
-
-res_Mg_703 <- as.data.frame(modsel_Mg_703[1])
-res_Mg_703$adj_r2 <- summary(topmod_Mg_703)$adj.r.squared
-res_Mg_703$pvalue <- lmp(topmod_Mg_703)
-
-res_S_703 <- as.data.frame(modsel_S_703[1])
-res_S_703$adj_r2 <- summary(topmod_S_703)$adj.r.squared
-res_S_703$pvalue <- lmp(topmod_S_703)
-
-res_Zn_703 <- as.data.frame(modsel_Zn_703[1])
-res_Zn_703$adj_r2 <- summary(topmod_Zn_703)$adj.r.squared
-res_Zn_703$pvalue <- lmp(topmod_Zn_703)
-
-res_703 <- rbind(res_N_703, res_P_703, res_K_703, res_B_703, res_Ca_703, res_S_703, res_Mg_703)
-res_703$dependent <- c("N", "P", "K", "B", "Ca", "S", "Mg")
-write.csv(res_703, "results/res_703_struc_nut1.csv")
-
-#------------------------------------------- LM with spectral and structural --------------------------------------------------------
-lm_N_703 <- lm(N ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-vif(lm_N_703)
-modsel_N_703 <- dredge(lm_N_703)
-topmod_N_703 <- lm(N ~ median+tgi_median+watersum, data = norm_703,na.action=na.fail)
-summary(topmod_N_703)
-N_703_pred <- predict(topmod_N_703)
-N_703_res <- resid(topmod_N_703)
-n_703_table <- cbind(norm_703$N, N_703_pred, N_703_res)
-head(n_703_table)
-
-lm_P_703 <- lm(P ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-summary(lm_P_703)
-modsel_P_703 <- dredge(lm_P_703)
-topmod_P_703 <- lm(P ~ median+tgi_median+watersum, data = norm_703,na.action=na.fail)
-summary(topmod_P_703)
-
-lm_K_703 <- lm(K ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-summary(lm_K_703)
-modsel_K_703 <- dredge(lm_K_703)
-topmod_K_703 <- lm(K ~ tgi_median, data = norm_703,na.action=na.fail)
-summary(topmod_K_703)
-
-lm_Ca_703 <- lm(Ca ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-summary(lm_Ca_703)
-modsel_Ca_703 <- dredge(lm_Ca_703)
-topmod_Ca_703 <- lm(Ca ~ moran+tgi_median+watersum, data = norm_703,na.action=na.fail)
-summary(topmod_Ca_703)
-
-lm_S_703 <- lm(S ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-summary(lm_S_703)
-modsel_S_703 <- dredge(lm_S_703)
-topmod_S_703 <- lm(S ~ median+tgi_median, data = norm_703,na.action=na.fail)
-summary(topmod_S_703)
-
-lm_B_703 <- lm(B ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-summary(lm_B_703)
-modsel_B_703 <- dredge(lm_B_703)
-topmod_B_703 <- lm(B ~ median, data = norm_703,na.action=na.fail)
-summary(topmod_B_703)
-
-lm_Zn_703 <- lm(Zn ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-summary(lm_Zn_703)
-modsel_Zn_703 <- dredge(lm_Zn_703)
-topmod_Zn_703 <- lm(Zn ~ median+tgi_median+tgi_sd, data = norm_703,na.action=na.fail)
-summary(topmod_Zn_703)
-
-lm_Mg_703 <- lm(Mg ~ median+sd+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_703, na.action=na.fail)
-summary(lm_Mg_703)
-modsel_Mg_703 <- dredge(lm_Mg_703)
-topmod_Mg_703 <- lm(Mg ~ median+tgi_median, data = norm_703,na.action=na.fail)
-summary(topmod_Mg_703)
-
-res_N_703 <- as.data.frame(modsel_N_703[1])
-res_N_703$adj_r2 <- summary(topmod_N_703)$adj.r.squared
-res_N_703$pvalue <- lmp(topmod_N_703)
-
-res_P_703 <- as.data.frame(modsel_P_703[1])
-res_P_703$adj_r2 <- summary(topmod_P_703)$adj.r.squared
-res_P_703$pvalue <- lmp(topmod_P_703)
-
-res_K_703 <- as.data.frame(modsel_K_703[1])
-res_K_703$adj_r2 <- summary(topmod_K_703)$adj.r.squared
-res_K_703$pvalue <- lmp(topmod_K_703)
-
-res_B_703 <- as.data.frame(modsel_B_703[1])
-res_B_703$adj_r2 <- summary(topmod_B_703)$adj.r.squared
-res_B_703$pvalue <- lmp(topmod_B_703)
-
-res_Ca_703 <- as.data.frame(modsel_Ca_703[1])
-res_Ca_703$adj_r2 <- summary(topmod_Ca_703)$adj.r.squared
-res_Ca_703$pvalue <- lmp(topmod_Ca_703)
-
-res_Mg_703 <- as.data.frame(modsel_Mg_703[1])
-res_Mg_703$adj_r2 <- summary(topmod_Mg_703)$adj.r.squared
-res_Mg_703$pvalue <- lmp(topmod_Mg_703)
-
-res_S_703 <- as.data.frame(modsel_S_703[1])
-res_S_703$adj_r2 <- summary(topmod_S_703)$adj.r.squared
-res_S_703$pvalue <- lmp(topmod_S_703)
-
-res_Zn_703 <- as.data.frame(modsel_Zn_703[1])
-res_Zn_703$adj_r2 <- summary(topmod_Zn_703)$adj.r.squared
-res_Zn_703$pvalue <- lmp(topmod_Zn_703)
-
-res_703_spec_struc <- rbind(res_N_703, res_P_703, res_K_703, res_B_703, res_Ca_703, res_Mg_703, res_S_703, res_Zn_703)
-res_703_spec_struc$dependent <- c("N", "P", "K", "B", "Ca", "Mg", "S", "Zn")
-write.csv(res_703_spec_struc, "results/res_703_spec_struc_nut1.csv")
-
-
-#------------------------------------------- LM with spectral only --------------------------------------------------------
-lm_N_703 <- lm(N ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-vif(lm_N_703)
-modsel_N_703 <- dredge(lm_N_703)
-topmod_N_703 <- lm(N ~ tgi_mean+watersum, data = norm_703,na.action=na.fail)
-summary(topmod_N_703)
-N_703_pred <- predict(topmod_N_703)
-N_703_res <- resid(topmod_N_703)
-n_703_table <- cbind(norm_703$N, N_703_pred, N_703_res)
-head(n_703_table)
-
-lm_P_703 <- lm(P ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-summary(lm_P_703)
-modsel_P_703 <- dredge(lm_P_703)
-topmod_P_703 <- lm(P ~ tgi_mean+watersum, data = norm_703,na.action=na.fail)
-summary(topmod_P_703)
-
-lm_K_703 <- lm(K ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-summary(lm_K_703)
-modsel_K_703 <- dredge(lm_K_703)
-topmod_K_703 <- lm(K ~ tgi_mean, data = norm_703,na.action=na.fail)
-summary(topmod_K_703)
-
-lm_Ca_703 <- lm(Ca ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-summary(lm_Ca_703)
-modsel_Ca_703 <- dredge(lm_Ca_703)
-topmod_Ca_703 <- lm(Ca ~ watersum, data = norm_703,na.action=na.fail)
-summary(topmod_Ca_703)
-
-lm_S_703 <- lm(S ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-summary(lm_S_703)
-modsel_S_703 <- dredge(lm_S_703)
-topmod_S_703 <- lm(S ~ tgi_mean+tgi_sd, data = norm_703,na.action=na.fail)
-summary(topmod_S_703)
-
-lm_B_703 <- lm(B ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-summary(lm_B_703)
-modsel_B_703 <- dredge(lm_B_703)
-topmod_B_703 <- lm(B ~ tgi_mean, data = norm_703,na.action=na.fail)
-summary(topmod_B_703)
-
-lm_Zn_703 <- lm(Zn ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-summary(lm_Zn_703)
-modsel_Zn_703 <- dredge(lm_Zn_703)
-topmod_Zn_703 <- lm(Zn ~ tgi_mean+tgi_sd, data = norm_703,na.action=na.fail)
-summary(topmod_Zn_703)
-
-lm_Mg_703 <- lm(Mg ~tgi_mean+tgi_sd+watersum, data = norm_703, na.action=na.fail)
-summary(lm_Mg_703)
-modsel_Mg_703 <- dredge(lm_Mg_703)
-topmod_Mg_703 <- lm(Mg ~ tgi_mean, data = norm_703,na.action=na.fail)
-summary(topmod_Mg_703)
-
-res_N_703 <- as.data.frame(modsel_N_703[1])
-res_N_703$adj_r2 <- summary(topmod_N_703)$adj.r.squared
-res_N_703$pvalue <- lmp(topmod_N_703)
-
-res_P_703 <- as.data.frame(modsel_P_703[1])
-res_P_703$adj_r2 <- summary(topmod_P_703)$adj.r.squared
-res_P_703$pvalue <- lmp(topmod_P_703)
-
-res_K_703 <- as.data.frame(modsel_K_703[1])
-res_K_703$adj_r2 <- summary(topmod_K_703)$adj.r.squared
-res_K_703$pvalue <- lmp(topmod_K_703)
-
-res_B_703 <- as.data.frame(modsel_B_703[1])
-res_B_703$adj_r2 <- summary(topmod_B_703)$adj.r.squared
-res_B_703$pvalue <- lmp(topmod_B_703)
-
-res_Ca_703 <- as.data.frame(modsel_Ca_703[1])
-res_Ca_703$adj_r2 <- summary(topmod_Ca_703)$adj.r.squared
-res_Ca_703$pvalue <- lmp(topmod_Ca_703)
-
-res_Mg_703 <- as.data.frame(modsel_Mg_703[1])
-res_Mg_703$adj_r2 <- summary(topmod_Mg_703)$adj.r.squared
-res_Mg_703$pvalue <- lmp(topmod_Mg_703)
-
-res_S_703 <- as.data.frame(modsel_S_703[1])
-res_S_703$adj_r2 <- summary(topmod_S_703)$adj.r.squared
-res_S_703$pvalue <- lmp(topmod_S_703)
-
-res_Zn_703 <- as.data.frame(modsel_Zn_703[1])
-res_Zn_703$adj_r2 <- summary(topmod_Zn_703)$adj.r.squared
-res_Zn_703$pvalue <- lmp(topmod_Zn_703)
-
-res_703_spectal <- rbind(res_N_703, res_P_703, res_K_703, res_Ca_703, res_Mg_703, res_S_703, res_Zn_703)
-res_703_spectal$dependent <- c("N", "P", "K", "Ca", "Mg", "S", "Zn")
-write.csv(res_703_spectal, "results/res_703_spectralOnly_nut1.csv")
-
-#---------------------------------------------------Repeat for 717 -----------------------------------------------
-
-lm_N_717 <- lm(N ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-vif(lm_N_717)
-modsel_N_717 <- dredge(lm_N_717)
-topmod_N_717 <- lm(N ~ sd+crrsd+watersum+mean, data = norm_717,na.action=na.fail)
-summary(topmod_N_717)
-N_717_pred <- predict(topmod_N_717)
-N_717_res <- resid(topmod_N_717)
-n_717_table <- cbind(norm_717$N, N_717_pred, N_717_res)
-head(n_717_table)
-
-lm_P_717 <- lm(P ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-summary(lm_P_717)
-modsel_P_717 <- dredge(lm_P_717)
-topmod_P_717 <- lm(P ~ sd+crrsd+watersum+mean, data = norm_717,na.action=na.fail)
-summary(topmod_P_717)
-
-lm_K_717 <- lm(K ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-summary(lm_K_717)
-modsel_K_717 <- dredge(lm_K_717)
-topmod_K_717 <- lm(K ~ crrmedian+crrsd, data = norm_717,na.action=na.fail)
-summary(topmod_K_717)
-
-lm_Ca_717 <- lm(Ca ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-summary(lm_Ca_717)
-modsel_Ca_717 <- dredge(lm_Ca_717)
-topmod_Ca_717 <- lm(Ca ~ moran, data = norm_717,na.action=na.fail)
-summary(topmod_Ca_717)
-
-lm_S_717 <- lm(S ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-summary(lm_S_717)
-modsel_S_717 <- dredge(lm_S_717)
-topmod_S_717 <- lm(S ~ mean+crrmedian, data = norm_717,na.action=na.fail)
-summary(topmod_S_717)
-
-lm_B_717 <- lm(B ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-summary(lm_B_717)
-modsel_B_717 <- dredge(lm_B_717)
-topmod_B_717 <- lm(B ~ crrmedian+sd+kurt+moran, data = norm_717,na.action=na.fail)
-summary(topmod_B_717)
-
-lm_Zn_717 <- lm(Zn ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-summary(lm_Zn_717)
-modsel_Zn_717 <- dredge(lm_Zn_717)
-topmod_Zn_717 <- lm(Zn ~ mean+sd, data = norm_717,na.action=na.fail)
-summary(topmod_Zn_717)
-
-lm_Mg_717 <- lm(Mg ~ mean+sd+crrmedian+crrsd+kurt+moran+watersum, data = norm_717, na.action=na.fail)
-summary(lm_Mg_717)
-modsel_Mg_717 <- dredge(lm_Mg_717)
-topmod_Mg_717 <- lm(Mg ~ crrsd+kurt+mean+sd+watersum, data = norm_717,na.action=na.fail)
-summary(topmod_Mg_717)
-
-# function to get lm pvalue
-lmp <- function (modelobject) {
-  if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
-  f <- summary(modelobject)$fstatistic
-  p <- pf(f[1],f[2],f[3],lower.tail=F)
-  attributes(p) <- NULL
-  return(p)
-}
-
-res_N_717 <- as.data.frame(modsel_N_717[1])
-res_N_717$adj_r2 <- summary(topmod_N_717)$adj.r.squared
-res_N_717$pvalue <- lmp(topmod_N_717)
-
-res_P_717 <- as.data.frame(modsel_P_717[1])
-res_P_717$adj_r2 <- summary(topmod_P_717)$adj.r.squared
-res_P_717$pvalue <- lmp(topmod_P_717)
-
-res_K_717 <- as.data.frame(modsel_K_717[1])
-res_K_717$adj_r2 <- summary(topmod_K_717)$adj.r.squared
-res_K_717$pvalue <- lmp(topmod_K_717)
-
-res_B_717 <- as.data.frame(modsel_B_717[1])
-res_B_717$adj_r2 <- summary(topmod_B_717)$adj.r.squared
-res_B_717$pvalue <- lmp(topmod_B_717)
-
-res_Ca_717 <- as.data.frame(modsel_Ca_717[1])
-res_Ca_717$adj_r2 <- summary(topmod_Ca_717)$adj.r.squared
-res_Ca_717$pvalue <- lmp(topmod_Ca_717)
-
-res_Mg_717 <- as.data.frame(modsel_Mg_717[1])
-res_Mg_717$adj_r2 <- summary(topmod_Mg_717)$adj.r.squared
-res_Mg_717$pvalue <- lmp(topmod_Mg_717)
-
-res_S_717 <- as.data.frame(modsel_S_717[1])
-res_S_717$adj_r2 <- summary(topmod_S_717)$adj.r.squared
-res_S_717$pvalue <- lmp(topmod_S_717)
-
-res_Zn_717 <- as.data.frame(modsel_Zn_717[1])
-res_Zn_717$adj_r2 <- summary(topmod_Zn_717)$adj.r.squared
-res_Zn_717$pvalue <- lmp(topmod_Zn_717)
-
-res_717 <- rbind(res_N_717, res_P_717, res_K_717, res_B_717, res_Ca_717, res_Mg_717, res_S_717, res_Zn_717)
-res_717$dependent <- c("N", "P", "K", "B", "Ca", "Mg", "S", "Zn")
-write.csv(res_717, "results/res_717_struc_nut1.csv")
-
-#------------------------------------------- LM spectral and structural --------------------------------------------------------
-
-lm_N_717 <- lm(N ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-vif(lm_N_717)
-modsel_N_717 <- dredge(lm_N_717)
-topmod_N_717 <- lm(N ~ tgi_median+tgi_sd+watersum, data = norm_717,na.action=na.fail)
-summary(topmod_N_717)
-N_717_pred <- predict(topmod_N_717)
-N_717_res <- resid(topmod_N_717)
-n_717_table <- cbind(norm_717$N, N_717_pred, N_717_res)
-head(n_717_table)
-
-lm_P_717 <- lm(P ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-summary(lm_P_717)
-modsel_P_717 <- dredge(lm_P_717)
-topmod_P_717 <- lm(P ~ tgi_sd+watersum, data = norm_717,na.action=na.fail)
-summary(topmod_P_717)
-
-lm_K_717 <- lm(K ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-summary(lm_K_717)
-modsel_K_717 <- dredge(lm_K_717)
-topmod_K_717 <- lm(K ~ crrmedian+tgi_sd, data = norm_717,na.action=na.fail)
-summary(topmod_K_717)
-
-lm_Ca_717 <- lm(Ca ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-summary(lm_Ca_717)
-modsel_Ca_717 <- dredge(lm_Ca_717)
-topmod_Ca_717 <- lm(Ca ~ moran, data = norm_717,na.action=na.fail)
-summary(topmod_Ca_717)
-
-lm_S_717 <- lm(S ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-summary(lm_S_717)
-modsel_S_717 <- dredge(lm_S_717)
-topmod_S_717 <- lm(S ~ crrmedian, data = norm_717,na.action=na.fail)
-summary(topmod_S_717)
-
-lm_B_717 <- lm(B ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-summary(lm_B_717)
-modsel_B_717 <- dredge(lm_B_717)
-topmod_B_717 <- lm(B ~ crrmedian+kurt+moran+sd+tgi_sd, data = norm_717,na.action=na.fail)
-summary(topmod_B_717)
-
-lm_Zn_717 <- lm(Zn ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-summary(lm_Zn_717)
-modsel_Zn_717 <- dredge(lm_Zn_717)
-topmod_Zn_717 <- lm(Zn ~ crrmedian+kurt+tgi_median, data = norm_717,na.action=na.fail)
-summary(topmod_Zn_717)
-
-lm_Mg_717 <- lm(Mg ~ sd+crrmedian+crrsd+kurt+moran+watersum+tgi_median+tgi_sd, data = norm_717, na.action=na.fail)
-summary(lm_Mg_717)
-modsel_Mg_717 <- dredge(lm_Mg_717)
-topmod_Mg_717 <- lm(Mg ~ tgi_median+tgi_sd, data = norm_717,na.action=na.fail)
-summary(topmod_Mg_717)
-
-res_N_717 <- as.data.frame(modsel_N_717[1])
-res_N_717$adj_r2 <- summary(topmod_N_717)$adj.r.squared
-res_N_717$pvalue <- lmp(topmod_N_717)
-
-res_P_717 <- as.data.frame(modsel_P_717[1])
-res_P_717$adj_r2 <- summary(topmod_P_717)$adj.r.squared
-res_P_717$pvalue <- lmp(topmod_P_717)
-
-res_K_717 <- as.data.frame(modsel_K_717[1])
-res_K_717$adj_r2 <- summary(topmod_K_717)$adj.r.squared
-res_K_717$pvalue <- lmp(topmod_K_717)
-
-res_B_717 <- as.data.frame(modsel_B_717[1])
-res_B_717$adj_r2 <- summary(topmod_B_717)$adj.r.squared
-res_B_717$pvalue <- lmp(topmod_B_717)
-
-res_Ca_717 <- as.data.frame(modsel_Ca_717[1])
-res_Ca_717$adj_r2 <- summary(topmod_Ca_717)$adj.r.squared
-res_Ca_717$pvalue <- lmp(topmod_Ca_717)
-
-res_Mg_717 <- as.data.frame(modsel_Mg_717[1])
-res_Mg_717$adj_r2 <- summary(topmod_Mg_717)$adj.r.squared
-res_Mg_717$pvalue <- lmp(topmod_Mg_717)
-
-res_S_717 <- as.data.frame(modsel_S_717[1])
-res_S_717$adj_r2 <- summary(topmod_S_717)$adj.r.squared
-res_S_717$pvalue <- lmp(topmod_S_717)
-
-res_Zn_717 <- as.data.frame(modsel_Zn_717[1])
-res_Zn_717$adj_r2 <- summary(topmod_Zn_717)$adj.r.squared
-res_Zn_717$pvalue <- lmp(topmod_Zn_717)
-
-res_717_spec_struc <- rbind(res_N_717, res_P_717, res_K_717, res_B_717, res_Ca_717, res_Mg_717, res_S_717, res_Zn_717)
-res_717_spec_struc$dependent <- c("N", "P", "K", "B", "Ca", "Mg", "S", "Zn")
-write.csv(res_717_spec_struc, "results/res_717_spec_struc_nut1.csv")
-
-#------------------------------------------- LM with spectral only --------------------------------------------------------
-lm_N_717 <- lm(N ~ tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-vif(lm_N_717)
-modsel_N_717 <- dredge(lm_N_717)
-topmod_N_717 <- lm(N ~ tgi_mean+tgi_iqr+watersum, data = norm_717,na.action=na.fail)
-summary(topmod_N_717)
-N_717_pred <- predict(topmod_N_717)
-N_717_res <- resid(topmod_N_717)
-n_717_table <- cbind(norm_717$N, N_717_pred, N_717_res)
-head(n_717_table)
-
-lm_P_717 <- lm(P ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-summary(lm_P_717)
-modsel_P_717 <- dredge(lm_P_717)
-topmod_P_717 <- lm(P ~ tgi_mean+watersum, data = norm_717,na.action=na.fail)
-summary(topmod_P_717)
-
-lm_K_717 <- lm(K ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-summary(lm_K_717)
-modsel_K_717 <- dredge(lm_K_717)
-topmod_K_717 <- lm(K ~ tgi_mean+tgi_iqr, data = norm_717,na.action=na.fail)
-summary(topmod_K_717)
-
-lm_Ca_717 <- lm(Ca ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-summary(lm_Ca_717)
-modsel_Ca_717 <- dredge(lm_Ca_717)
-topmod_Ca_717 <- lm(Ca ~ tgi_mean, data = norm_717,na.action=na.fail)
-summary(topmod_Ca_717)
-
-lm_S_717 <- lm(S ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-summary(lm_S_717)
-modsel_S_717 <- dredge(lm_S_717)
-topmod_S_717 <- lm(S ~ tgi_iqr+watersum, data = norm_717,na.action=na.fail)
-summary(topmod_S_717)
-
-lm_B_717 <- lm(B ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-summary(lm_B_717)
-modsel_B_717 <- dredge(lm_B_717)
-topmod_B_717 <- lm(B ~ tgi_iqr, data = norm_717,na.action=na.fail)
-summary(topmod_B_717)
-
-lm_Zn_717 <- lm(Zn ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-summary(lm_Zn_717)
-modsel_Zn_717 <- dredge(lm_Zn_717)
-topmod_Zn_717 <- lm(Zn ~ tgi_iqr, data = norm_717,na.action=na.fail)
-summary(topmod_Zn_717)
-
-lm_Mg_717 <- lm(Mg ~tgi_mean+tgi_iqr+watersum, data = norm_717, na.action=na.fail)
-summary(lm_Mg_717)
-modsel_Mg_717 <- dredge(lm_Mg_717)
-topmod_Mg_717 <- lm(Mg ~ tgi_mean+tgi_iqr, data = norm_717,na.action=na.fail)
-summary(topmod_Mg_717)
-
-res_N_717 <- as.data.frame(modsel_N_717[1])
-res_N_717$adj_r2 <- summary(topmod_N_717)$adj.r.squared
-res_N_717$pvalue <- lmp(topmod_N_717)
-
-res_P_717 <- as.data.frame(modsel_P_717[1])
-res_P_717$adj_r2 <- summary(topmod_P_717)$adj.r.squared
-res_P_717$pvalue <- lmp(topmod_P_717)
-
-res_K_717 <- as.data.frame(modsel_K_717[1])
-res_K_717$adj_r2 <- summary(topmod_K_717)$adj.r.squared
-res_K_717$pvalue <- lmp(topmod_K_717)
-
-res_B_717 <- as.data.frame(modsel_B_717[1])
-res_B_717$adj_r2 <- summary(topmod_B_717)$adj.r.squared
-res_B_717$pvalue <- lmp(topmod_B_717)
-
-res_Ca_717 <- as.data.frame(modsel_Ca_717[1])
-res_Ca_717$adj_r2 <- summary(topmod_Ca_717)$adj.r.squared
-res_Ca_717$pvalue <- lmp(topmod_Ca_717)
-
-res_Mg_717 <- as.data.frame(modsel_Mg_717[1])
-res_Mg_717$adj_r2 <- summary(topmod_Mg_717)$adj.r.squared
-res_Mg_717$pvalue <- lmp(topmod_Mg_717)
-
-res_S_717 <- as.data.frame(modsel_S_717[1])
-res_S_717$adj_r2 <- summary(topmod_S_717)$adj.r.squared
-res_S_717$pvalue <- lmp(topmod_S_717)
-
-res_Zn_717 <- as.data.frame(modsel_Zn_717[1])
-res_Zn_717$adj_r2 <- summary(topmod_Zn_717)$adj.r.squared
-res_Zn_717$pvalue <- lmp(topmod_Zn_717)
-
-res_717_spectal <- rbind(res_N_717, res_P_717, res_K_717, res_B_717, res_Ca_717, res_Mg_717, res_S_717, res_Zn_717)
-res_717_spectal$dependent <- c("N", "P", "K", "B", "Ca", "Mg", "S", "Zn")
-write.csv(res_717_spectal, "results/res_717_spectralOnly_nut1.csv")
-
+spec_mods_717 <- lapply(yvar, topmod_res, xvars_all_fixed, z_703)
+
+# ------------------------------------------- Write results -----------------------------------------------
+write.csv(struc_619, "results/struc_619.csv")
+write.csv(struc_703, "results/struc_703.csv")
+write.csv(struc_717, "results/struc_717.csv")
+
+write.csv(spec_619, "results/spec_619.csv")
+write.csv(spec_703, "results/spec_703.csv")
+write.csv(spec_717, "results/spec_717.csv")
+
+write.csv(spec_struc_619, "results/spec_struc_619.csv")
+write.csv(spec_struc_703, "results/spec_struc_703.csv")
+write.csv(spec_struc_717, "results/spec_struc_717.csv")
 
 #--------------------------------------------mixed effect models --------------------------------------------------
 
 # add treatment/fert column
 norm_619$group <- paste(norm_619$treatment, norm_619$fertilizer, sep="_")
 
-mix_med_717 <- lmer(N ~ crrmedian+kurt+moran+(1|soils), data = norm_619, na.action = na.fail)
+mix_med_717 <- lm(N ~ crrmedian+kurt+moran+(1|soils), data = norm_619, na.action = na.fail)
 summary(mix_med_717)
 r.squaredGLMM(mix_med_717)
 # Of course using treatment will better explain B levels... How is this helpful?
 
-
-# ------------------------------ Try lm with nutrients as independent ---------------------------------------------
-
-# All nutrients: 
-#all nutrients: `N`+`P`+`K`+`Mg`+`Ca`+`S`+`Zn`+`Mn`+`Cu`+`Fe`+`B`+`Al`+`Na`
-# nutrients and soil: "`N`+`P`+`K`+`Mg`+`Ca`+`S`+`Zn`+`Mn`+`Cu`+`Fe`+`B`+`Al`+`Na`+`soil_GoA`+`soil_Ra`+`soil_MaB`"
-
-# # Function for calculating r^2 in SAR model, null model will be same for each date
-# 
-# w <- knn2nb(knearneigh(coordinates(plots_619), k=8))
-# 
-# null <- spautolm(median ~ 1, data = agg_619, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# #null <- lm(BuAc ~ 1, data=norm_1cm, na.action=na.fail)
-# r2 <- function(model){
-#   r.squaredLR(model, null = null)[1]
-# }
-# 
-# adj_r2 <- function(model){
-#   r2 <- r.squaredLR(model, null = null)[1]
-#   n <- model$fit[[5]]
-#   p <- model$parameters
-#   1-(1-r2)*((n - 1)/(n - p - 1))
-# }
-# 
-# # 619 OLS
-# lm_619 <- lm(median ~ `N`+`Ca`+`S`+`Cu`+`B`+`Al`, data = norm_619, na.action = na.fail)
-# summary(lm_619)
-# qqnorm(lm_619$residuals)
-# sd(lm_619$residuals)
-# vif(lm_619) # Colinearity: removed Na, P, Fe, Mn, K
-# dredge(lm_619, trace = T)
-# 
-# # 619 check for spatial autocorrelation
-# std_619$ols_res <- lm_619$residuals
-# # Weights matrix
-# w <- knn2nb(knearneigh(coordinates(plots), k=8))
-# moran.test(std_619$ols_res, nb2listw(w))
-# 
-# #Apply SAR model
-# sar_619 <- spautolm(median ~ `N`+`Ca`+`S`+`Cu`+`B`+`Al`, data = std_619, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# summary(sar_619)
-# sar_resi <- sar_619$fit[[9]]
-# std_619$sar_resi <- sar_resi
-# moran.test(std_619$sar_resi, nb2listw(w))
-# 
-# 
-# lm_717 <- lm(median ~ `N`+`P`+`Ca`+`S`+`Cu`+`Fe`+`B`, data = std_717, na.action = na.fail)
-# summary(lm_717)
-# vif(lm_717) # Removed Na, Mg, Mn, K, Zn, Al
-# dredge(lm_717, trace = T)
-# 
-# # 717 check for spatial autocorrelation
-# std_717$ols_res <- lm_717$residuals
-# moran.test(std_717$ols_res, nb2listw(w))
-# 
-# #Apply SAR model
-# sar_717 <- spautolm(median ~ `N`+`P`+`Ca`+`S`+`Cu`+`Fe`+`B`, data = std_717, listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# summary(sar_717)
-# sar_resi <- sar_717$fit[[9]]
-# std_717$sar_resi <- sar_resi
-# moran.test(std_717$sar_resi, nb2listw(w))
-# 
-# lm_717 <- lm(median ~ `N`+`P`+`Mg`+`S`+`Mn`+`Fe`+`B`+`Al`, data = std_717, na.action = na.fail)
-# summary(lm_717)
-# vif(lm_717) # Eliminated Na, Cu, Ca, Zn, K
-# dredge(lm_717, trace = T)
-# 
-# 
-# # ---------------------------------SAR models with structural metric as response for each time step--------------------------------
-# 
-# r2 <- function(model){
-#   r.squaredLR(model, null = null)[1]
-# }
-# 
-# adj_r2 <- function(model){
-#   r2 <- r.squaredLR(model, null = null)[1]
-#   n <- model$fit[[5]]
-#   p <- model$parameters
-#   1-(1-r2)*((n - 1)/(n - p - 1))
-# }
-# 
-# w <- knn2nb(knearneigh(coordinates(plots_619), k=8))
-# 
-# # ---------------------------------------SAR 619--------------------------------------------
-# variables <- "`N`+`Ca`+`S`+`Cu`+`B`+`Al`+`soil_GoA`+`soil_Ra`+`soil_MaB`"
-# dat <- std_619
-# 
-# 
-# metric <- "median"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# med_619 <- modsel[1]
-# med_619$depvar <- "median"
-# 
-# metric <- "iqr"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# iqr_619 <- modsel[1]
-# iqr_619$depvar <- "iqr"
-# 
-# metric <- "crrmedian"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# crrmed_619 <- modsel[1]
-# crrmed_619$depvar <- "crrmed"
-# 
-# metric <- "crriqr"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# crriqr_619 <- modsel[1]
-# crriqr_619$depvar <- "crriqr"
-# 
-# metric <- "skew"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# skew_619 <- modsel[1]
-# skew_619$depvar <- "skew"
-# 
-# metric <- "kurt"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# kurt_619 <- modsel[1]
-# 
-# metric <- "PlotCRR"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# plotcrr_619 <- modsel[1]
-# 
-# metric <- "rumple"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# rumple_619 <- modsel[1]
-# 
-# metric <- "moran"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# moran_619 <- modsel[1]
-# 
-# 
-# # ---------------------------------------SAR 717--------------------------------------------
-# variables <- "`N`+`P`+`Ca`+`S`+`Cu`+`Fe`+`B`+`soil_GoA`+`soil_Ra`+`soil_MaB`"
-# 
-# dat <- std_717
-# 
-# metric <- "median"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# med_717 <- modsel[1]
-# 
-# metric <- "iqr"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# iqr_717 <- modsel[1]
-# 
-# metric <- "crrmedian"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# crrmed_717 <- modsel[1]
-# 
-# metric <- "crriqr"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# crriqr_717 <- modsel[1]
-# 
-# metric <- "skew"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# skew_717 <- modsel[1]
-# 
-# metric <- "kurt"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# kurt_717 <- modsel[1]
-# 
-# metric <- "PlotCRR"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# plotcrr_717 <- modsel[1]
-# 
-# metric <- "rumple"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# rumple_717 <- modsel[1]
-# 
-# metric <- "moran"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# moran_717 <- modsel[1]
-# 
-# # ---------------------------------------SAR 717--------------------------------------------
-# variables <- "`N`+`P`+`Mg`+`S`+`Mn`+`Fe`+`B`+`Al`"
-# 
-# dat <- std_717
-# 
-# metric <- "median"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# med_717 <- modsel[1]
-# 
-# metric <- "iqr"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# iqr_717 <- modsel[1]
-# 
-# metric <- "crrmedian"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# crrmed_717 <- modsel[1]
-# 
-# metric <- "crriqr"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# crriqr_717 <- modsel[1]
-# 
-# metric <- "skew"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# skew_717 <- modsel[1]
-# 
-# metric <- "kurt"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# kurt_717 <- modsel[1]
-# 
-# metric <- "PlotCRR"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# plotcrr_717 <- modsel[1]
-# 
-# metric <- "rumple"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# rumple_717 <- modsel[1]
-# 
-# metric <- "moran"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# moran_717 <- modsel[1]
-
-#---------------------------------------SAR nutrient results tables --------------------------------------
-# 
-# med_619$depvar <- "median"
-# iqr_619$depvar <- "iqr"
-# crrmed_619$depvar <- "crrmed"
-# crriqr_619$depvar <- "crriqr"
-# skew_619$depvar <- "skew"
-# kurt_619$depvar <- "kurt"
-# plotcrr_619$depvar <- "plotcrr"
-# rumple_619$depvar <- "rumple"
-# moran_619$depvar <- "moran"
-# 
-# med_717$depvar <- "median"
-# iqr_717$depvar <- "iqr"
-# crrmed_717$depvar <- "crrmed"
-# crriqr_717$depvar <- "crriqr"
-# skew_717$depvar <- "skew"
-# kurt_717$depvar <- "kurt"
-# plotcrr_717$depvar <- "plotcrr"
-# rumple_717$depvar <- "rumple"
-# moran_717$depvar <- "moran"
-# 
-# med_717$depvar <- "median"
-# iqr_717$depvar <- "iqr"
-# crrmed_717$depvar <- "crrmed"
-# crriqr_717$depvar <- "crriqr"
-# skew_717$depvar <- "skew"
-# kurt_717$depvar <- "kurt"
-# plotcrr_717$depvar <- "plotcrr"
-# rumple_717$depvar <- "rumple"
-# moran_717$depvar <- "moran"
-# 
-# sarresults_nutr_619 <- rbind(med_619, iqr_619, crrmed_619, crriqr_619, skew_619, kurt_619, plotcrr_619, rumple_619, moran_619)
-# sarresults_nutr_619$depvar <- c("median", "iqr", "crrmed", "crriqr", "skew", "kurt", "plotcrr", "rumple", "moran")
-# 
-# sarresults_nutr_717 <- rbind(med_717, iqr_717, crrmed_717, crriqr_717, skew_717, kurt_717, plotcrr_717, rumple_717, moran_717)
-# sarresults_nutr_717$depvar <- c("median", "iqr", "crrmed", "crriqr", "skew", "kurt", "plotcrr", "rumple", "moran")
-# 
-# sarresults_nutr_717 <- rbind(med_717, iqr_717, crrmed_717, crriqr_717, skew_717, kurt_717, plotcrr_717, rumple_717, moran_717)
-# sarresults_nutr_717$depvar <- c("median", "iqr", "crrmed", "crriqr", "skew", "kurt", "plotcrr", "rumple", "moran")
-# 
-# write.csv(sarresults_nutr_619, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2018/canopy_analysis/sarresults_nutr_619.csv")
-# write.csv(sarresults_nutr_717, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2018/canopy_analysis/sarresults_nutr_717.csv")
-# write.csv(sarresults_nutr_717, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2018/canopy_analysis/sarresults_nutr_717.csv")
-# 
-
-# # ---------------------------------SAR models with nutrients as response for each time step--------------------------------
-# 
-# variables <- "crrmedian+crriqr+median+skew+iqr+kurt+rumple+moran+soil_GoA+soil_Ra+soil_MaB+watersum"
-# 
-# 
-# 
-# r2 <- function(model){
-#   r.squaredLR(model, null = null)[1]
-# }
-# 
-# adj_r2 <- function(model){
-#   r2 <- r.squaredLR(model, null = null)[1]
-#   n <- model$fit[[5]]
-#   p <- model$parameters
-#   1-(1-r2)*((n - 1)/(n - p - 1))
-# }
-# 
-# w <- knn2nb(knearneigh(coordinates(plots_619), k=8))
-# 
-# # ---------------------------------------SAR 619--------------------------------------------
-# dat <- std_619
-# 
-# 
-# metric <- "N"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# n_619 <- modsel[1]
-# 
-# tmp <-spautolm(N~median+moran, 
-#          data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#          family="SAR")
-# sar_resi <- tmp$fit[[9]]
-# std_619$sar_resi <- sar_resi
-# plot(std_619$sar_resi)
-# 
-# metric <- "P"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# p_619 <- modsel[1]
-# 
-# metric <- "K"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# k_619 <- modsel[1]
-# 
-# 
-# metric <- "Ca"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# ca_619 <- modsel[1]
-# 
-# metric <- "Mg"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# mg_619 <- modsel[1]
-# 
-# metric <- "B"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# b_619 <- modsel[1]
-# 
-# metric <- "Mn"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# mn_619 <- modsel[1]
-# 
-# metric <- "S"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# s_619 <- modsel[1]
-# 
-# metric <- "Zn"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# zn_619 <- modsel[1]
-# 
-# metric <- "Cu"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# cu_619 <- modsel[1]
-# 
-# metric <- "Fe"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# fe_619 <- modsel[1]
-# 
-# metric <- "Al"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# al_619 <- modsel[1]
-# 
-# # ---------------------------------------SAR 717--------------------------------------------
-# dat <- std_717
-# 
-# 
-# metric <- "N"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# n_717 <- modsel[1]
-# 
-# metric <- "P"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# p_717 <- modsel[1]
-# 
-# metric <- "K"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# k_717 <- modsel[1]
-# 
-# metric <- "Ca"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# ca_717 <- modsel[1]
-# 
-# metric <- "Mg"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# mg_717 <- modsel[1]
-# 
-# metric <- "B"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# b_717 <- modsel[1]
-# 
-# metric <- "Mn"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# mn_717 <- modsel[1]
-# 
-# metric <- "S"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# s_717 <- modsel[1]
-# 
-# metric <- "Zn"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# zn_717 <- modsel[1]
-# 
-# metric <- "Cu"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# cu_717 <- modsel[1]
-# 
-# metric <- "Fe"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# fe_717 <- modsel[1]
-# 
-# metric <- "Al"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# al_717 <- modsel[1]
-# 
-# 
-# # ---------------------------------------SAR 717--------------------------------------------
-# dat <- std_717
-# 
-# 
-# metric <- "N"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# n_717 <- modsel[1]
-# 
-# metric <- "P"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# p_717 <- modsel[1]
-# 
-# metric <- "K"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# k_717 <- modsel[1]
-# 
-# metric <- "Ca"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# ca_717 <- modsel[1]
-# 
-# metric <- "Mg"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# mg_717 <- modsel[1]
-# 
-# metric <- "B"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# b_717 <- modsel[1]
-# 
-# metric <- "Mn"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# mn_717 <- modsel[1]
-# 
-# metric <- "S"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# s_717 <- modsel[1]
-# 
-# metric <- "Zn"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# zn_717 <- modsel[1]
-# 
-# metric <- "Cu"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# cu_717 <- modsel[1]
-# 
-# metric <- "Fe"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# fe_717 <- modsel[1]
-# 
-# metric <- "Al"
-# null <- spautolm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail, family="SAR")
-# sar <- spautolm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                 family="SAR")
-# summary(sar)
-# adj_r2(sar)
-# modsel <- dredge(sar, beta = "none", trace = T, extra = c('r2', 'adj_r2'))
-# al_717 <- modsel[1]
-# 
-# 
-# # --------------------------------------------SAR structure results tables -------------------------------------
-# sarresults_struct_619 <- rbind(n_619, p_619, k_619, ca_619, mg_619, b_619, mn_619, s_619, zn_619, cu_619, fe_619, al_619)
-# sarresults_struct_619$depvar <- c("N", "P", "K", "Ca", "Mg", "B", "Mn", "S", "Zn", "Cu", "Fe", "Al")
-# 
-# sarresults_struct_717 <- rbind(n_717, p_717, k_717, ca_717, mg_717, b_717, mn_717, s_717, zn_717, cu_717, fe_717, al_717)
-# sarresults_struct_717$depvar <- c("N", "P", "K", "Ca", "Mg", "B", "Mn", "S", "Zn", "Cu", "Fe", "Al")
-# 
-# sarresults_struct_717 <- rbind(n_717, p_717, k_717, ca_717, mg_717, b_717, mn_717, s_717, zn_717, cu_717, fe_717, al_717)
-# sarresults_struct_717$depvar <- c("N", "P", "K", "Ca", "Mg", "B", "Mn", "S", "Zn", "Cu", "Fe", "Al")
-# 
-# write.csv(sarresults_struct_619, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/sarresults_struct_619.csv")
-# write.csv(sarresults_struct_717, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/sarresults_struct_717.csv")
-# write.csv(sarresults_struct_717, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/sarresults_struct_717.csv")
-
-
-
-# #--------------------------------------------Try NN regression---------------------------------------------------------
-# library(neuralnet)
-# set.seed(42)
-# train_data_indices <- rep(FALSE, nrow(agg_619))
-# train_data_indices[sample(1:nrow(agg_619), round(0.7 * nrow(agg_619)))] <- TRUE # randomly select 70% of the data for training
-# nn <- neuralnet(N ~ median++iqr+crrmedian+crriqr+skew+kurt+moran+watersum,data=agg_619[train_data_indices, ],hidden=c(3,2),linear.output=T)
-# pred_nn <- predict(nn, newdata=agg_619[-train_data_indices, ])
-# 
-# pred_nn_res <- pred_nn*(max(agg_619$median)-min(agg_619$median))+min(agg_619$median)
-# test_res <- (agg_619[-train_data_indices, ]$median)*(max(agg_619$median)-min(agg_619$median))+min(agg_619$median)
-# MSE_nn <- sum((test_res - pred_nn_res)^2)/nrow(agg_619[-train_data_indices, ])
-# 
-# # compare to SAR
-# 
-# w <- knn2nb(knearneigh(coordinates(plots_619[train_data_indices, ]), k=8))
-# 
-# variables <- "`N`+`Ca`+`S`+`Cu`+`B`+`Al`+`soil_GoA`+`soil_Ra`+`soil_MaB`"
-# dat <- agg_619[train_data_indices, ]
-# 
-# metric <- "median"
-# null <- errorsarlm( as.formula(paste(metric, 1, sep="~")), data = dat, 
-#                   listw=nb2listw(w), zero.policy = T, na.action = na.fail)
-# sar <- errorsarlm(as.formula(paste(metric, variables, sep = " ~ ")), 
-#                 data = dat, listw=nb2listw(w), zero.policy = T, na.action = na.fail, 
-#                )
-# summary(sar)
-# 
-# predict_sar <- predict.sarlm(sar,newdata=agg_619[-train_data_indices, ] )
-# MSE_sar <- sum((predict_sar - agg_619[-train_data_indices, ]$median)^2)/nrow(agg_619[-train_data_indices, ])
-# 
-# 
-# # ---------------------------------------- Try RF regression --------------------------------------------------
-# 
-# #all nutrients: `N` + `P` + `K`+`Mg` +`Ca` + `S` + `Zn`+`Mn`+`Cu`+`Fe`+`B`+`Al`+`Na`
-# 
-# #--------------------------------RF 619 ---------------------------------
-# 
-# set.seed(42)
-# train_data_indices <- rep(FALSE, nrow(agg_619))
-# train_data_indices[sample(1:nrow(agg_619), round(0.7 * nrow(agg_619)))] <- TRUE # randomly select 70% of the data for training
-# rf_regression<- randomForest(N ~ median+iqr+crrmedian+crriqr+skew+kurt+moran+watersum, data = agg_619[train_data_indices, ], importance=T)
-# rf_regression
-# varImpPlot(rf_regression)
-# pred_struc <- predict(rf_regression, agg_619[!train_data_indices,]) # predict the rings
-# #table(pred_struc, agg_619$median[!train_data_indices])
-# plot(agg_619$skew[!train_data_indices], pred_struc, xlab="Observed", ylab="Predicted")
-# 
-# #--------------------------------RF 717 ---------------------------------
-# 
-# set.seed(42)
-# train_data_indices <- rep(FALSE, nrow(agg_717))
-# train_data_indices[sample(1:nrow(agg_717), round(0.7 * nrow(agg_717)))] <- TRUE # randomly select 70% of the data for training
-# rf_regression<- randomForest(skew ~ `N` + `P` + `K`+`Mg` +`Ca` + `Zn`+`Cu`+`Fe`+`B`+`Al`+`Na`, data = agg_717[train_data_indices, ], importance=T)
-# rf_regression
-# varImpPlot(rf_regression)
-# pred_struc <- predict(rf_regression, agg_717[!train_data_indices,]) # predict the rings
-# #table(pred_struc, agg_717$median[!train_data_indices])
-# plot(agg_717$skew[!train_data_indices], pred_struc, xlab="Observed", ylab="Predicted")
-# 
-# #--------------------------------RF 717 ---------------------------------
-# 
-# set.seed(42)
-# train_data_indices <- rep(FALSE, nrow(agg_717))
-# train_data_indices[sample(1:nrow(agg_717), round(0.7 * nrow(agg_717)))] <- TRUE # randomly select 70% of the data for training
-# rf_regression<- randomForest(median ~ `watersum`+`N` + `P` + `K`+`Mg` +`Ca` + `Zn`+`Cu`+`Fe`+`B`+`Al`+`Na`, data = agg_717[train_data_indices, ], importance=T)
-# rf_regression
-# varImpPlot(rf_regression)
-# pred_struc <- predict(rf_regression, agg_717[!train_data_indices,]) # predict the rings
-# #table(pred_struc, agg_717$median[!train_data_indices])
-# plot(agg_717$median[!train_data_indices], pred_struc, xlab="Observed", ylab="Predicted")
-# 
-# 
-# # ---------------------------------------Try multinominal logisitic regression with nnet package --------------------------------
-# 
-# # 619
-# 
-# library(nnet)
-# plots_619_df$Trt_agg <- relevel(plots_619_df$Trt_agg, ref = "100% Control")
-# mltnom_619 <- multinom(Trt_agg ~ crrmedian+median+kurt+rumple+moran+dip+crriqr, data = plots_619_df, na.action = na.fail)
-# summary(mltnom_619)
-# 
-# modsel_619 <- dredge(mltnom_619)
-# modsel_619
-# 
-# topmod_619 <- multinom(Trt_agg ~ crrmedian+median+kurt+rumple+moran, data = plots_619_df, na.action = na.fail)
-# summary(topmod_619)
-# 
-# library(DescTools)
-# PseudoR2(topmod_619, which = "all")
-# z <- summary(topmod_619)$coefficients/summary(topmod_619)$standard.errors
-# z
-# p <- (1 - pnorm(abs(z), 0, 1)) * 2
-# p
-# 
-# coefs_619 <- coef(topmod_619)
-# exp(coefs_619) #transformed to odds ratio
-# (exp(coefs_619)-1)*100 # percent change in the odds for a one unit increase in the independent variable
-# 
-# # Try binary logistic regression with 100% control as baseline
-# # def_100 <- as.data.frame(dt_619[Trt_agg == "100% Control" | Trt_agg == "deficiency",])
-# # def_100 <- droplevels(def_100)
-# # tox_100 <- as.data.frame(dt_619[Trt_agg == "100% Control" | Trt_agg == "toxicity",])
-# # tox_100 <- droplevels(tox_100)
-# # control_0_100 <- as.data.frame(dt_619[Trt_agg == "100% Control" | Trt_agg == "0% Control",])
-# # control_0_100 <- droplevels(control_0_100)
-# # 
-# # binary_619 <- glm(Trt_agg ~ crrmedian+median+kurt+rumple+moran+crriqr+skew+iqr, data = control_0_100, family = binomial, na.action = na.fail)
-# # modsel_619_binary <- dredge(binary_619)
-# # topmod_619_binary <- glm(Trt_agg ~ crrmedian+iqr+moran+rumple+skew, data = tox_100, family = binomial)
-# # summary(topmod_619_binary)
-# # 
-# # library(pscl)
-# # 
-# # pR2(topmod_619_binary)
-# 
-# # Try multinomial logisitc regression with mlogit package
-# # library(foreign)
-# # library(mlogit)
-# # 
-# # mlogit_data_619 <- mlogit.data(plots_619_df, choice = "Trt_agg", shape = "wide")
-# # mlogit_619 <- mlogit(Trt_agg~crrmedian+kurt+median+skew_ln+rumple+moran, data = mlogit_data_619,
-# #                      method = "nr", print.level = 0)
-# # summary(mlogit_619)
-# # 
-# # # Weights matrix
-# # w <- knn2nb(knearneigh(coordinates(plots), k=8))
-# 
-# 
-# # 717
-# plots_717_df$Trt_agg <- relevel(plots_717_df$Trt_agg, ref = "100% Control")
-# mltnom_717 <- multinom(Trt_agg ~ crrmedian+median+kurt+rumple+moran+dip+crriqr, data = plots_717_df, na.action = na.fail)
-# summary(mltnom_717)
-# 
-# modsel_717 <- dredge(mltnom_717)
-# modsel_717
-# 
-# topmod_717 <- multinom(Trt_agg ~ crrmedian+kurt+median+moran, data = plots_717_df, na.action = na.fail)
-# summary(topmod_717)
-# PseudoR2(topmod_717, which = "all")
-# z <- summary(topmod_717)$coefficients/summary(topmod_717)$standard.errors
-# z
-# p <- (1 - pnorm(abs(z), 0, 1)) * 2
-# p
-# 
-# coefs_717 <- coef(topmod_717)
-# exp(coefs_717) #transformed to odds ratio
-# (exp(coefs_717)-1)*100 # percent change in the odds for a one unit increase in the independent variable
-# 
-# # 717
-# plots_717_df$Trt_agg <- relevel(plots_717_df$Trt_agg, ref = "100% Control")
-# mltnom_717 <- multinom(Trt_agg ~ crrmedian+median+kurt+rumple+moran+dip+crriqr, data = plots_717_df, na.action = na.fail)
-# summary(mltnom_717)
-# 
-# modsel_717 <- dredge(mltnom_717)
-# modsel_717
-# 
-# topmod_717 <- multinom(Trt_agg ~ median+rumple+moran, data = plots_717_df, na.action = na.fail)
-# summary(topmod_717)
-# PseudoR2(topmod_717, which = "all")
-# z <- summary(topmod_717)$coefficients/summary(topmod_717)$standard.errors
-# z
-# p <- (1 - pnorm(abs(z), 0, 1)) * 2
-# p
-# 
-# coefs_717 <- coef(topmod_717)
-# exp(coefs_717) #transformed to odds ratio
-# (exp(coefs_717)-1)*100 # percent change in the odds for a one unit increase in the independent variable
-# 
-# 
-# # Try combining tox and def to see if model improves
-# plots_717_df$Trt_agg_v2 <- as.character(plots_619_df$Trt_agg)
-# plots_717_df[Trt_agg == "deficiency"]$Trt_agg_v2 <- "stressed"
-# plots_717_df[Trt_agg == "toxicity"]$Trt_agg_v2 <- "stressed"
-# plots_717_df$Trt_agg_v2 <- as.factor(plots_717_df$Trt_agg_v2) 
-# 
-# plots_717_df$Trt_agg <- relevel(plots_717_df$Trt_agg, ref = "100% Control")
-# 
-# mltnom_717_v2 <- multinom(Trt_agg_v2 ~ crrmedian+median+kurt+rumple+moran+dip+crriqr, data = plots_717_df, na.action = na.fail)
-# summary(mltnom_717_v2)
-# 
-# modsel_717_v2 <- dredge(mltnom_717_v2)
-# modsel_717_v2
-# 
-# topmod_717_v2 <- multinom(Trt_agg_v2 ~ median+rumple+moran+crrmedian, data = plots_717_df, na.action = na.fail)
-# summary(topmod_717_v2)
-# PseudoR2(topmod_717_v2, which = "all")
-# z <- summary(topmod_717)$coefficients/summary(topmod_717)$standard.errors
-# z
-# p <- (1 - pnorm(abs(z), 0, 1)) * 2
-# p
-# 
-# 
-# # ----------------------------------------------Result tables------------------------------------------------------
-# 
-# vars <- topmod_619$coefnames[-1]
-# sd_all <- numeric(length(vars))
-# mean_all <- numeric(length(vars))
-# count <- 1
-# for (x in vars){
-#   values <- as.data.frame(plots_619_df)[x]
-#   sd_all[count] <- sd(values[,1])
-#   mean_all[count] <- mean(values[,1])
-#   count <- count+1
-# }
-# 
-# vars_619 <- as.data.frame(vars)
-# vars_619$mean <- mean_all
-# vars_619$sd <- sd_all
-# 
-# #write.csv(vars_619, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/vars_619.csv")
-# 
-# levels <- topmod_619$lev[-1]
-# #df_all <- data.frame(var=character(), coefs=list(), SE=double(), Wald=double(), p=double(), exp=double())
-# coefs <- numeric(length(levels))
-# std_coefs <- numeric(length(levels))
-# SE <- numeric(length(levels))
-# Wald <- numeric(length(levels))
-# p <- numeric(length(levels))
-# exp <- numeric(length(levels))
-# count <- 1
-# 
-# for (level in levels){
-#   coefs[count] <- list(coef(topmod_619)[count,])
-#   SE[count] <- list(summary(topmod_619)$standard.errors[count,])
-#   z <- (summary(topmod_619)$coefficients/summary(topmod_619)$standard.errors)
-#   Wald[count] <- list(z[count,])
-#   p[count] <- list(((1 - pnorm(abs(z), 0, 1)) * 2)[count,])
-#   std_coefs[count] <- list((sqrt(3)/pi) * (coefs[[count]][-1] * sd_all))
-#   exp[count] <- list(exp(std_coefs[[count]]))
-#   count <- count+1
-# }
-# 
-# vars <- topmod_619$coefnames
-# 
-# results_0_619 <- as.data.frame(vars)
-# results_0_619$level <- "0% Control"
-# results_0_619$coefs <- coefs[[1]]
-# results_0_619$std_coefs <- c(0,std_coefs[[1]])
-# results_0_619$exp <- c(0,exp[[1]])
-# results_0_619$SE <- SE[[1]]
-# results_0_619$p <- p[[1]]
-# results_0_619$wald <- Wald[[1]]
-# 
-# results_tox_619 <- as.data.frame(vars)
-# results_tox_619$level <- "toxicity"
-# results_tox_619$coefs <- coefs[[3]]
-# results_tox_619$std_coefs <- c(0,std_coefs[[3]])
-# results_tox_619$exp <- c(0,exp[[3]])
-# results_tox_619$SE <- SE[[3]]
-# results_tox_619$p <- p[[3]]
-# results_tox_619$wald <- Wald[[3]]
-# 
-# results_def_619 <- as.data.frame(vars)
-# results_def_619$level <- "deficiency"
-# results_def_619$coefs <- coefs[[2]]
-# results_def_619$std_coefs <- c(0,std_coefs[[2]])
-# results_def_619$exp <- c(0,exp[[2]])
-# results_def_619$SE <- SE[[2]]
-# results_def_619$p <- p[[2]]
-# results_def_619$wald <- Wald[[2]]
-# 
-# 
-# 
-# results_619 <- rbind(results_0_619, results_def_619, results_tox_619)
-# 
-# 
-# # mlogit_results <- function(x){
-# #   levels <- x$lev[-1]
-# #   coefs <- numeric(length(levels))
-# #   SE <- numeric(length(levels))
-# #   Wald <- numeric(length(levels))
-# #   p <- numeric(length(levels))
-# #   exp <- numeric(length(levels))
-# #   count <- 1
-# #   for (level in levels){
-# #     coefs[count] <- list(coef(x)[count,])
-# #     SE[count] <- list(summary(x)$standard.errors[count,])
-# #     Wald[count] <- list(summary(x)$coefficients/summary(topmod_619)$standard.errors[count,])
-# #     p[count] <- list(((1 - pnorm(abs(z), 0, 1)) * 2)[count,])
-# #     exp[count] <- list(exp(coefs[[count]]))
-# #     count <- count+1
-# #   }
-# #   levels
-# #   coefs
-# #   SE
-# #   Wald
-# #   p
-# #   exp
-# # }
-# # 
-# # mlogit_results_619 <- mlogit_results(topmod_619)
-# 
-# 
-# #write.csv(results_619, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/results_619.csv")
-# 
-# 
-# vars <- topmod_717$coefnames[-1]
-# sd_all <- numeric(length(vars))
-# mean_all <- numeric(length(vars))
-# count <- 1
-# for (x in vars){
-#   values <- as.data.frame(plots_717_df)[x]
-#   sd_all[count] <- sd(values[,1])
-#   mean_all[count] <- mean(values[,1])
-#   count <- count+1
-# }
-# 
-# vars_717 <- as.data.frame(vars)
-# vars_717$mean <- mean_all
-# vars_717$sd <- sd_all
-# 
-# #write.csv(vars_717, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/vars_717.csv")
-# 
-# levels <- topmod_717$lev[-1]
-# #df_all <- data.frame(var=character(), coefs=list(), SE=double(), Wald=double(), p=double(), exp=double())
-# coefs <- numeric(length(levels))
-# std_coefs <- numeric(length(levels))
-# SE <- numeric(length(levels))
-# Wald <- numeric(length(levels))
-# p <- numeric(length(levels))
-# exp <- numeric(length(levels))
-# count <- 1
-# 
-# for (level in levels){
-#   coefs[count] <- list(coef(topmod_717)[count,])
-#   SE[count] <- list(summary(topmod_717)$standard.errors[count,])
-#   z <- (summary(topmod_717)$coefficients/summary(topmod_717)$standard.errors)
-#   Wald[count] <- list(z[count,])
-#   p[count] <- list(((1 - pnorm(abs(z), 0, 1)) * 2)[count,])
-#   std_coefs[count] <- list((sqrt(3)/pi) * (coefs[[count]][-1] * sd_all))
-#   exp[count] <- list(exp(std_coefs[[count]]))
-#   count <- count+1
-# }
-# 
-# vars <- topmod_717$coefnames
-# 
-# results_0_717 <- as.data.frame(vars)
-# results_0_717$level <- "0% Control"
-# results_0_717$coefs <- coefs[[1]]
-# results_0_717$std_coefs <- c(0,std_coefs[[1]])
-# results_0_717$exp <- c(0,exp[[1]])
-# results_0_717$SE <- SE[[1]]
-# results_0_717$p <- p[[1]]
-# results_0_717$wald <- Wald[[1]]
-# 
-# results_tox_717 <- as.data.frame(vars)
-# results_tox_717$level <- "toxicity"
-# results_tox_717$coefs <- coefs[[3]]
-# results_tox_717$std_coefs <- c(0,std_coefs[[3]])
-# results_tox_717$exp <- c(0,exp[[3]])
-# results_tox_717$SE <- SE[[3]]
-# results_tox_717$p <- p[[3]]
-# results_tox_717$wald <- Wald[[3]]
-# 
-# results_def_717 <- as.data.frame(vars)
-# results_def_717$level <- "deficiency"
-# results_def_717$coefs <- coefs[[2]]
-# results_def_717$std_coefs <- c(0,std_coefs[[2]])
-# results_def_717$exp <- c(0,exp[[2]])
-# results_def_717$SE <- SE[[2]]
-# results_def_717$p <- p[[2]]
-# results_def_717$wald <- Wald[[2]]
-# 
-# 
-# results_717 <- rbind(results_0_717, results_def_717, results_tox_717)
-# 
-# #write.csv(results_717, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/results_717.csv")
-# 
-# 
-# vars <- topmod_717$coefnames[-1]
-# sd_all <- numeric(length(vars))
-# mean_all <- numeric(length(vars))
-# count <- 1
-# for (x in vars){
-#   values <- as.data.frame(plots_717_df)[x]
-#   sd_all[count] <- sd(values[,1])
-#   mean_all[count] <- mean(values[,1])
-#   count <- count+1
-# }
-# 
-# vars_717 <- as.data.frame(vars)
-# vars_717$mean <- mean_all
-# vars_717$sd <- sd_all
-# 
-# #write.csv(vars_717, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/vars_717.csv")
-# 
-# levels <- topmod_717$lev[-1]
-# #df_all <- data.frame(var=character(), coefs=list(), SE=double(), Wald=double(), p=double(), exp=double())
-# coefs <- numeric(length(levels))
-# std_coefs <- numeric(length(levels))
-# SE <- numeric(length(levels))
-# Wald <- numeric(length(levels))
-# p <- numeric(length(levels))
-# exp <- numeric(length(levels))
-# count <- 1
-# 
-# for (level in levels){
-#   coefs[count] <- list(coef(topmod_717)[count,])
-#   SE[count] <- list(summary(topmod_717)$standard.errors[count,])
-#   z <- (summary(topmod_717)$coefficients/summary(topmod_717)$standard.errors)
-#   Wald[count] <- list(z[count,])
-#   p[count] <- list(((1 - pnorm(abs(z), 0, 1)) * 2)[count,])
-#   std_coefs[count] <- list((sqrt(3)/pi) * (coefs[[count]][-1] * sd_all))
-#   exp[count] <- list(exp(std_coefs[[count]]))
-#   count <- count+1
-# }
-# 
-# vars <- topmod_717$coefnames
-# 
-# results_0_717 <- as.data.frame(vars)
-# results_0_717$level <- "0% Control"
-# results_0_717$coefs <- coefs[[1]]
-# results_0_717$std_coefs <- c(0,std_coefs[[1]])
-# results_0_717$exp <- c(0,exp[[1]])
-# results_0_717$SE <- SE[[1]]
-# results_0_717$p <- p[[1]]
-# results_0_717$wald <- Wald[[1]]
-# 
-# results_tox_717 <- as.data.frame(vars)
-# results_tox_717$level <- "toxicity"
-# results_tox_717$coefs <- coefs[[3]]
-# results_tox_717$std_coefs <- c(0,std_coefs[[3]])
-# results_tox_717$exp <- c(0,exp[[3]])
-# results_tox_717$SE <- SE[[3]]
-# results_tox_717$p <- p[[3]]
-# results_tox_717$wald <- Wald[[3]]
-# 
-# results_def_717 <- as.data.frame(vars)
-# results_def_717$level <- "deficiency"
-# results_def_717$coefs <- coefs[[2]]
-# results_def_717$std_coefs <- c(0,std_coefs[[2]])
-# results_def_717$exp <- c(0,exp[[2]])
-# results_def_717$SE <- SE[[2]]
-# results_def_717$p <- p[[2]]
-# results_def_717$wald <- Wald[[2]]
-# 
-# results_717 <- rbind(results_0_717, results_def_717, results_tox_717)
-# 
-# #write.csv(results_717, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/tobacco_results/results_717.csv")
-# 
-# 
-# # ------------------------------------- Random Forest Classification ------------------------------------------------------
-# library(randomForest)
-# set.seed(42)
-# train_data_indices <- rep(FALSE, nrow(norm_1cm))
-# train_data_indices[sample(1:nrow(norm_1cm), round(0.7 * nrow(norm_1cm)))] <- TRUE # randomly select 80% of the data for training
-# rf_regression_1cm<- randomForest(BuAc_ln ~ median+skew+PlotCRR_ln+crrmedian_ln+crriqr+Trt+AUDPC_ln+geary+iqr_ln, data=norm_1cm[train_data_indices, ], importance=T)
-# rf_regression_1cm
-# varImpPlot(rf_regression_1cm)
-# pred_trt <- predict(rf_regression_1cm, norm_1cm[!train_data_indices,]) # predict the rings
-# table(pred_trt, norm_1cm$BuAc_ln[!train_data_indices])
-# plot(norm_1cm$BuAc_ln[!train_data_indices], pred_trt, xlab="Observed", ylab="Predicted")
-# #abline(a=0, b=1, lty=2, col=2)
-# 
-# set.seed(42)
-# train_data_indices <- rep(FALSE, nrow(norm_5cm))
-# train_data_indices[sample(1:nrow(norm_5cm), round(0.7 * nrow(norm_5cm)))] <- TRUE # randomly select 80% of the data for training
-# rf_regression_5cm<- randomForest(BuAc_ln ~ median+skew+PlotCRR_ln+crrmedian_ln+crriqr+Trt+AUDPC_ln+geary+iqr_ln, data=norm_5cm[train_data_indices, ], importance=T)
-# rf_regression_5cm
-# varImpPlot(rf_regression_5cm)
-# pred_trt <- predict(rf_regression_5cm, norm_5cm[!train_data_indices,]) # predict the rings
-# table(pred_trt, norm_5cm$BuAc_ln[!train_data_indices])
-# plot(norm_5cm$BuAc_ln[!train_data_indices], pred_trt, xlab="Observed", ylab="Predicted")
-# #abline(a=0, b=1, lty=2, col=2)
-# 
-# set.seed(42)
-# train_data_indices <- rep(FALSE, nrow(norm_10cm))
-# train_data_indices[sample(1:nrow(norm_10cm), round(0.7 * nrow(norm_10cm)))] <- TRUE # randomly select 80% of the data for training
-# rf_regression_10cm<- randomForest(BuAc_ln ~ median+skew+PlotCRR_ln+crrmedian_ln+crriqr+Trt+AUDPC_ln+geary+iqr_ln, data=norm_10cm[train_data_indices, ], importance=T)
-# rf_regression_10cm
-# varImpPlot(rf_regression_10cm)
-# pred_trt <- predict(rf_regression_10cm, norm_10cm[!train_data_indices,]) # predict the rings
-# table(pred_trt, norm_10cm$BuAc_ln[!train_data_indices])
-# plot(norm_10cm$BuAc_ln[!train_data_indices], pred_trt, xlab="Observed", ylab="Predicted")
-# #abline(a=0, b=1, lty=2, col=2)
-# 
-# set.seed(42)
-# train_data_indices <- rep(FALSE, nrow(norm_20cm))
-# train_data_indices[sample(1:nrow(norm_20cm), round(0.7 * nrow(norm_20cm)))] <- TRUE # randomly select 80% of the data for training
-# rf_regression_20cm<- randomForest(BuAc_ln ~ median+skew+PlotCRR_ln+crrmedian_ln+crriqr+Trt+AUDPC_ln+geary+iqr_ln, data=norm_20cm[train_data_indices, ], importance=T)
-# rf_regression_20cm
-# varImpPlot(rf_regression_20cm)
-# pred_trt <- predict(rf_regression_20cm, norm_20cm[!train_data_indices,]) # predict the rings
-# table(pred_trt, norm_20cm$BuAc_ln[!train_data_indices])
-# plot(norm_20cm$BuAc_ln[!train_data_indices], pred_trt, xlab="Observed", ylab="Predicted")
-# #abline(a=0, b=1, lty=2, col=2)
