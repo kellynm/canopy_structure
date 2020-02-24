@@ -843,13 +843,15 @@ write.csv(spec_struc_619, "results/spec_struc_619.csv")
 write.csv(spec_struc_703, "results/spec_struc_703.csv")
 write.csv(spec_struc_717, "results/spec_struc_717.csv")
 
-#--------------------------------------------mixed effect models --------------------------------------------------
+#--------------------------------------------plots --------------------------------------------------
+struc_619$type <- "structural"
+spec_619$type <- "spectral"
+spec_struc_619$type <- "spectral+structural"
+all_619 <- rbind(struc_619[,15:17], spec_619[,9:11], spec_struc_619[,17:19])
 
-# add treatment/fert column
-norm_619$group <- paste(norm_619$treatment, norm_619$fertilizer, sep="_")
+library(ggplot2)
+all_619$yvar <- factor(all_619$yvar,levels = c("N", "P", "K", "B", "Ca", "Mg", "S", "Zn"))
+all_619$type <- factor(all_619$type, levels = c("structural", "spectral", "spectral+structural"))
 
-mix_med_717 <- lm(N ~ crrmedian+kurt+moran+(1|soils), data = norm_619, na.action = na.fail)
-summary(mix_med_717)
-r.squaredGLMM(mix_med_717)
-# Of course using treatment will better explain B levels... How is this helpful?
-
+ggplot(data=all_619, aes(x=yvar, y=adj_r2, fill=type)) +
+  geom_bar(stat="identity", position=position_dodge())
