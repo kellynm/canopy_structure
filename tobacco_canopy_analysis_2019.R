@@ -22,9 +22,11 @@ library(lme4)
 library(MuMIn)
 library(spdep)
 library(tibble)
+library(dplyr)
+
 #Load raster data for all dates
 #setwd("/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/LkWheeler_Sorghum/LkWheeler_Fusarium_Sorghum")
-setwd("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019")
+setwd("H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019")
 
 tobacco_area <- readOGR("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/layers/boundary", "wilson19_boundary", stringsAsFactors = F)
 tobacco_area <- spTransform(tobacco_area, CRS("+proj=lcc +lat_1=36.16666666666666 +lat_2=34.33333333333334 +lat_0=33.75 +lon_0=-79 +x_0=609601.22 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"))
@@ -68,8 +70,10 @@ nutrient <- fread("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/w
 plots_619 <- plots
 plots_619 <- merge(plots_619, nutrient[Date==617], by.x="join_id", by.y='Join_ID')
 plots_703 <- plots
+#701
 plots_703 <- merge(plots_703, nutrient[Date==617], by.x="join_id", by.y='Join_ID')
 plots_717 <- plots
+#718
 plots_717 <- merge(plots_717, nutrient[Date==617], by.x="join_id", by.y='Join_ID')
 
 spad_617 <- fread("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/wilson19_617_spad.csv", stringsAsFactors = F)
@@ -217,6 +221,7 @@ plots_619 <- merge(plots_619, crr_df_list[[1]], by.x="plotid", by.y="plots")
 plots_703 <- merge(plots_703, crr_df_list[[2]], by.x="plotid", by.y="plots")
 plots_717 <- merge(plots_717, crr_df_list[[3]], by.x="plotid", by.y="plots")
 
+spplot(plots_717, zcol='crriqr')
 
 #---------------------------------------------------------- Crop height ----------------------------------------------------------
 plot_extract_619 <- csm_619_velox$extract(sp=plots)
@@ -658,13 +663,13 @@ z_619$fert <- agg_619$fert
 z_619$soils <- agg_619$soils
 z_619 <- dummy_cols(z_619, select_columns = "soils")
 
-z_703 <- as.data.frame(normalize(agg_703[,2:40]))
+z_703 <- as.data.frame(scale(agg_703[,2:40]))
 z_703$Id <- agg_703$Group.1
 z_703$treatment <- agg_703$treatment
 z_703$fert <- agg_703$fert
 z_703$soils <- agg_703$soils
 
-z_717 <- as.data.frame(normalize(agg_717[,2:40]))
+z_717 <- as.data.frame(scale(agg_717[,2:40]))
 z_717$Id <- agg_717$Group.1
 z_717$treatment <- agg_717$treatment
 z_717$fert <- agg_717$fert
@@ -820,15 +825,15 @@ spec_mods_717 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_717)
 
 spec_struc_619 <- lapply(yvar, lm_compare, xvars_all_fixed, z_619)
 spec_struc_619 <- do.call(rbind, lapply(spec_struc_619, data.frame))
-spec_mods_619 <- lapply(yvar, topmod_res, xvars_all_fixed, z_619)
+spec_struc_mods_619 <- lapply(yvar, topmod_res, xvars_all_fixed, z_619)
 
 spec_struc_703 <- lapply(yvar, lm_compare, xvars_all_fixed, z_703)
 spec_struc_703 <- do.call(rbind, lapply(spec_struc_703, data.frame))
-spec_mods_703 <- lapply(yvar, topmod_res, xvars_all_fixed, z_703)
+spec_struc_mods_703 <- lapply(yvar, topmod_res, xvars_all_fixed, z_703)
 
 spec_struc_717 <- lapply(yvar, lm_compare, xvars_all_fixed, z_717)
 spec_struc_717 <- do.call(rbind, lapply(spec_struc_717, data.frame))
-spec_mods_717 <- lapply(yvar, topmod_res, xvars_all_fixed, z_703)
+spec_struc_mods_717 <- lapply(yvar, topmod_res, xvars_all_fixed, z_717)
 
 # ------------------------------------------- Write results -----------------------------------------------
 write.csv(struc_619, "results/struc_619.csv")
@@ -843,15 +848,83 @@ write.csv(spec_struc_619, "results/spec_struc_619.csv")
 write.csv(spec_struc_703, "results/spec_struc_703.csv")
 write.csv(spec_struc_717, "results/spec_struc_717.csv")
 
+get_coef <- function(mod){
+  df <- as.data.frame(coef(summary(mod)))
+  df$xvar <- names(mod$coefficients)
+  df
+}
+
+struc_619_all <- lapply(struc_mods_619, get_coef)
+write.csv(bind_rows(struc_619_all, .id = "column_label"), "results/struc_619_coefs.csv")
+
+spec_619_all <- lapply(spec_mods_619, get_coef)
+write.csv(bind_rows(spec_619_all, .id = "column_label"), "results/spec_619_coefs.csv")
+
+spec_struc_619_all <- lapply(spec_struc_mods_619, get_coef)
+write.csv(bind_rows(spec_struc_619_all, .id = "column_label"), "results/spec_struc_619_coefs.csv")
+
+
+struc_703_all <- lapply(struc_mods_703, get_coef)
+write.csv(bind_rows(struc_703_all, .id = "column_label"), "results/struc_703_coefs.csv")
+
+spec_703_all <- lapply(spec_mods_703, get_coef)
+write.csv(bind_rows(spec_703_all, .id = "column_label"), "results/spec_703_coefs.csv")
+
+spec_struc_703_all <- lapply(spec_struc_mods_703, get_coef)
+write.csv(bind_rows(spec_struc_703_all, .id = "column_label"), "results/spec_struc_703_coefs.csv")
+
+
+struc_717_all <- lapply(struc_mods_717, get_coef)
+write.csv(bind_rows(struc_717_all, .id = "column_label"), "results/struc_717_coefs.csv")
+
+spec_717_all <- lapply(spec_mods_717, get_coef)
+write.csv(bind_rows(spec_717_all, .id = "column_label"), "results/spec_717_coefs.csv")
+
+spec_struc_717_all <- lapply(spec_struc_mods_717, get_coef)
+write.csv(bind_rows(spec_struc_717_all, .id = "column_label"), "results/spec_struc_717_coefs.csv")
+
+
 #--------------------------------------------plots --------------------------------------------------
+#619
+
 struc_619$type <- "structural"
 spec_619$type <- "spectral"
 spec_struc_619$type <- "spectral+structural"
 all_619 <- rbind(struc_619[,15:17], spec_619[,9:11], spec_struc_619[,17:19])
 
 library(ggplot2)
-all_619$yvar <- factor(all_619$yvar,levels = c("N", "P", "K", "B", "Ca", "Mg", "S", "Zn"))
+all_619$yvar <- factor(all_619$yvar,levels = c("N", "P", "K", "Ca", "Mg", "S", "B", "Zn"))
 all_619$type <- factor(all_619$type, levels = c("structural", "spectral", "spectral+structural"))
 
 ggplot(data=all_619, aes(x=yvar, y=adj_r2, fill=type)) +
-  geom_bar(stat="identity", position=position_dodge())
+  geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
+  xlab('nutrient') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.8)
+
+#703
+
+struc_703$type <- "structural"
+spec_703$type <- "spectral"
+spec_struc_703$type <- "spectral+structural"
+all_703 <- rbind(struc_703[,15:17], spec_703[,9:11], spec_struc_703[,17:19])
+
+library(ggplot2)
+all_703$yvar <- factor(all_703$yvar,levels = c("N", "P", "K", "Ca", "Mg", "S", "B", "Zn"))
+all_703$type <- factor(all_703$type, levels = c("structural", "spectral", "spectral+structural"))
+
+ggplot(data=all_703, aes(x=yvar, y=adj_r2, fill=type)) +
+  geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
+  xlab('nutrient') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.8)
+#717
+
+struc_717$type <- "structural"
+spec_717$type <- "spectral"
+spec_struc_717$type <- "spectral+structural"
+all_717 <- rbind(struc_717[,15:17], spec_717[,9:11], spec_struc_717[,17:19])
+
+library(ggplot2)
+all_717$yvar <- factor(all_717$yvar,levels = c("N", "P", "K", "Ca", "Mg", "S", "B", "Zn"))
+all_717$type <- factor(all_717$type, levels = c("structural", "spectral", "spectral+structural"))
+
+ggplot(data=all_717, aes(x=yvar, y=adj_r2, fill=type)) +
+  geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
+  xlab('nutrient') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.8)
