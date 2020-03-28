@@ -25,20 +25,19 @@ library(tibble)
 library(dplyr)
 
 #Load raster data for all dates
-#setwd("/media/Kellyn/F20E17B40E177139/kpmontgo@ncsu.edu/LkWheeler_Sorghum/LkWheeler_Fusarium_Sorghum")
 setwd("H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019")
 
-tobacco_area <- readOGR("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/layers/boundary", "wilson19_boundary", stringsAsFactors = F)
+tobacco_area <- readOGR("H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/layers/boundary", "wilson19_boundary", stringsAsFactors = F)
 tobacco_area <- spTransform(tobacco_area, CRS("+proj=lcc +lat_1=36.16666666666666 +lat_2=34.33333333333334 +lat_0=33.75 +lon_0=-79 +x_0=609601.22 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"))
 
-csm_619 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/csm/wilson19_619_csm.tif'), tobacco_area)
-csm_703 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/csm/wilson19_703_csm.tif'), tobacco_area)
-csm_717 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/csm/wilson19_717_csm.tif'), tobacco_area)
-dem <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/lidar/wilson19_dem.tif'), tobacco_area)
+csm_619 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/csm/wilson19_619_csm.tif'), tobacco_area)
+csm_703 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/csm/wilson19_703_csm.tif'), tobacco_area)
+csm_717 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/csm/wilson19_717_csm.tif'), tobacco_area)
+dem <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/lidar/wilson19_dem.tif'), tobacco_area)
 
-nosoil_619 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_619.tif'), tobacco_area)
-nosoil_703 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_703.tif'), tobacco_area)
-nosoil_717 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_717.tif'), tobacco_area)
+nosoil_619 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_619.tif'), tobacco_area)
+nosoil_703 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_703.tif'), tobacco_area)
+nosoil_717 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_717.tif'), tobacco_area)
 
 csm_masked_619 <- mask(csm_619, nosoil_619)
 csm_masked_703 <- mask(csm_619, nosoil_703)
@@ -48,7 +47,7 @@ csm_619_velox <- velox(csm_masked_619)
 csm_703_velox <- velox(csm_masked_703)
 csm_717_velox <- velox(csm_masked_717)
 
-plots <- readOGR("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/layers/plots", "wilson19_plots", stringsAsFactors = F)
+plots <- readOGR("H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/layers/plots", "wilson19_plots", stringsAsFactors = F)
 #plots$fertilizer <- as.factor(plots$fertilizer)
 #plots$treatment <- as.factor(plots$treatment)
 #plots$group <- as.factor(plots$group)
@@ -64,36 +63,24 @@ plots@data <- plots_df
 #plots$nutr_id <- substr(plots$Id, 1, 3)
 #plots$nutr_id[fert_plots] <- fert_plot_ids
 
-nutrient <- fread("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/wilson19_nutrients.csv", stringsAsFactors = F)
+nutrient <- fread("H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/wilson19_nutrients.csv", stringsAsFactors = F)
 #names(nutrient) <- c("Plot","treatment", "Sample #",  "N","P","K","Mg", "Ca","S","Zn", "Mn", "Cu", "Fe", "B", "Al", "Na") 
 
-plots_619 <- plots
-plots_619 <- merge(plots_619, nutrient[Date==617], by.x="join_id", by.y='Join_ID')
-plots_703 <- plots
-#701
-plots_703 <- merge(plots_703, nutrient[Date==617], by.x="join_id", by.y='Join_ID')
-plots_717 <- plots
-#718
-plots_717 <- merge(plots_717, nutrient[Date==617], by.x="join_id", by.y='Join_ID')
 
-spad_617 <- fread("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/wilson19_617_spad.csv", stringsAsFactors = F)
-spad_701 <- fread("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/wilson19_617_spad.csv", stringsAsFactors = F)
-spad_718 <- fread("Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/wilson19_617_spad.csv", stringsAsFactors = F)
-
-plots_619 <- merge(plots_619, spad_617, by.x="spad_id", by.y='JOIN')
-plots_703 <- merge(plots_703, spad_701, by.x="spad_id", by.y='JOIN')
-plots_717 <- merge(plots_717, spad_718, by.x="spad_id", by.y='JOIN')
+spad_617 <- fread("H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/wilson19_617_spad.csv", stringsAsFactors = F)
+spad_701 <- fread("H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/wilson19_617_spad.csv", stringsAsFactors = F)
+spad_718 <- fread("H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/wilson19_617_spad.csv", stringsAsFactors = F)
 
 
-red_619 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_619_red_georef.tif'), tobacco_area)
-green_619 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_619_green_georef.tif'), tobacco_area)
-blue_619 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_619_blue_georef.tif'), tobacco_area)
-red_703 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_703_red_georef.tif'), tobacco_area)
-green_703 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_703_green_georef.tif'), tobacco_area)
-blue_703 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_703_blue_georef.tif'), tobacco_area)
-red_717 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_717_red_georef.tif'), tobacco_area)
-green_717 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_717_green_georef.tif'), tobacco_area)
-blue_717 <- crop(raster('Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_717_blue_georef.tif'), tobacco_area)
+red_619 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_619_red_georef.tif'), tobacco_area)
+green_619 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_619_green_georef.tif'), tobacco_area)
+blue_619 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_619_blue_georef.tif'), tobacco_area)
+red_703 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_703_red_georef.tif'), tobacco_area)
+green_703 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_703_green_georef.tif'), tobacco_area)
+blue_703 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_703_blue_georef.tif'), tobacco_area)
+red_717 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_717_red_georef.tif'), tobacco_area)
+green_717 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_717_green_georef.tif'), tobacco_area)
+blue_717 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/ortho/wilson/wilson19_717_blue_georef.tif'), tobacco_area)
 
 red_masked_619 <- mask(red_619, nosoil_619)
 green_masked_619 <- mask(green_619, nosoil_619)
@@ -158,16 +145,6 @@ tgi_metrics <- function(x){
 
 tgi_df_list <- lapply(tgiRast_list, tgi_metrics)
 
-
-plots_619 <- merge(plots_619, varInd_df_list[[1]], by.x="plotid", by.y="plots")
-plots_703 <- merge(plots_703, varInd_df_list[[2]], by.x="plotid", by.y="plots")
-plots_717 <- merge(plots_717, varInd_df_list[[3]], by.x="plotid", by.y="plots")
-
-plots_619 <- merge(plots_619, tgi_df_list[[1]], by.x="plotid", by.y="plots")
-plots_703 <- merge(plots_703, tgi_df_list[[2]], by.x="plotid", by.y="plots")
-plots_717 <- merge(plots_717, tgi_df_list[[3]], by.x="plotid", by.y="plots")
-
-
 #--------------------------------------------------------- SIMWE water depth model---------------------------------------------------------------
 water <- crop(raster("water/wilson19_water.tif"), tobacco_area)
 
@@ -184,10 +161,6 @@ waterDF <- data.frame(plots=plots$plotid, watersum = watersum, watersd=watersd, 
 # norm_water <- as.data.frame(scale(waterDF[,2:4]))
 # norm_water$plots <- waterDF$plots
 
-plots_619 <- merge(plots_619, waterDF, by.x="plotid", by.y="plots")
-plots_703 <- merge(plots_703, waterDF, by.x="plotid", by.y="plots")
-plots_717 <- merge(plots_717, waterDF, by.x="plotid", by.y="plots")
-
 #---------------------------------------------------------- Canopy relief ratio----------------------------------------------------------------
 crr <- function(x){
   (mean(x, na.rm=T)-min(x, na.rm=T))/(max(x, na.rm=T)-min(x, na.rm=T))
@@ -198,9 +171,9 @@ crrRast_703 <- focal(csm_703, w=matrix(1/25, nc=5, nr=5), crr)
 crrRast_717 <- focal(csm_717, w=matrix(1/25, nc=5, nr=5), crr)
 crrRast_list <- list(crrRast_619,crrRast_703,crrRast_717)
 
-writeRaster(crrRast_619, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/results/crr_619.tif", format="GTiff", overwrite = T)
-writeRaster(crrRast_703, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/results/crr_703.tif", format="GTiff", overwrite = T)
-writeRaster(crrRast_717, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/results/crr_717.tif", format="GTiff", overwrite = T)
+writeRaster(crrRast_619, "H/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/results/crr_619.tif", format="GTiff", overwrite = T)
+writeRaster(crrRast_703, "H/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/results/crr_703.tif", format="GTiff", overwrite = T)
+writeRaster(crrRast_717, "H/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/results/crr_717.tif", format="GTiff", overwrite = T)
 
 
 crr_metrics <- function(x){
@@ -216,12 +189,6 @@ crr_metrics <- function(x){
 }
 
 crr_df_list <- lapply(crrRast_list, crr_metrics)
-
-plots_619 <- merge(plots_619, crr_df_list[[1]], by.x="plotid", by.y="plots")
-plots_703 <- merge(plots_703, crr_df_list[[2]], by.x="plotid", by.y="plots")
-plots_717 <- merge(plots_717, crr_df_list[[3]], by.x="plotid", by.y="plots")
-
-spplot(plots_717, zcol='crriqr')
 
 #---------------------------------------------------------- Crop height ----------------------------------------------------------
 plot_extract_619 <- csm_619_velox$extract(sp=plots)
@@ -251,11 +218,6 @@ ch_metrics <- function(x){
 
 ch_df_list <- lapply(extract_list, ch_metrics)
 
-#merge all metrics into spatial polygons
-plots_619 <- merge(plots_619, ch_df_list[[1]], by.x="plotid", by.y="plots")
-plots_703 <- merge(plots_703, ch_df_list[[2]], by.x="plotid", by.y="plots")
-plots_717 <- merge(plots_717, ch_df_list[[3]], by.x="plotid", by.y="plots")
-
 #--------------------------------------------------------- rumple index -----------------------------------------------------------------
 library(lidR)
 
@@ -278,13 +240,8 @@ rumple <- function(x){
 }
 
 
-csm_list <- list(csm_masked_619, csm_masked_703, csm_masked_717)
+csm_list <- list(csm_619, csm_703, csm_717)
 rumple_df_list <- lapply(csm_list, rumple)
-
-#merge all metrics into spatial polygons
-plots_619 <- merge(plots_619, rumple_df_list[[1]], by.x="plotid", by.y="plots")
-plots_703 <- merge(plots_703, rumple_df_list[[2]], by.x="plotid", by.y="plots")
-plots_717 <- merge(plots_717, rumple_df_list[[3]], by.x="plotid", by.y="plots")
 
 
 # ------------------------------------------------ spatial autocorrelation -----------------------------------------------------
@@ -313,13 +270,9 @@ autocor_metrics <- function(x, w){
 }
 
 #Using approx 65 cm x 65 cm neighborhood matrix (approx in row plant spacing)
-autocor_619 <- autocor_metrics(csm_619, matrix(c(rep.int(1,84), 0, rep.int(1,84)), nc=13, nr=13))
-autocor_703 <- autocor_metrics(csm_703, matrix(c(rep.int(1,84), 0, rep.int(1,84)), nc=13, nr=13))
-autocor_717 <- autocor_metrics(csm_717, matrix(c(rep.int(1,84), 0, rep.int(1,84)), nc=13, nr=13))
-
-plots_619 <- merge(plots_619, autocor_619, by.x="plotid", by.y="plots")
-plots_703 <- merge(plots_703, autocor_703, by.x="plotid", by.y="plots")
-plots_717 <- merge(plots_717, autocor_717, by.x="plotid", by.y="plots")
+autocor_619 <- autocor_metrics(csm_619, matrix(c(rep.int(1,60), 0, rep.int(1,60)), nc=11, nr=11))
+autocor_703 <- autocor_metrics(csm_703, matrix(c(rep.int(1,60), 0, rep.int(1,60)), nc=11, nr=11))
+autocor_717 <- autocor_metrics(csm_717, matrix(c(rep.int(1,60), 0, rep.int(1,60)), nc=11, nr=11))
 
 
 # Create rasters representing local Moran's I for visualization
@@ -351,7 +304,7 @@ local_moran_plots_619$overwrite <- TRUE
 local_moran_plots_619$fun <- sum
 
 merged_local_moran_plots_619 <- do.call(raster::merge, local_moran_plots_619)
-#writeRaster(merged_local_moran_plots_619, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/results/local_moran_plots_619.tif", format="GTiff", overwrite = T)
+#writeRaster(merged_local_moran_plots_619, "H/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/results/local_moran_plots_619.tif", format="GTiff", overwrite = T)
 
 local_moran_plots_703 <- autocor_rasters(csm_703, matrix(c(1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1), nc=5, nr=5))
 names(local_moran_plots_703) <- NULL
@@ -359,7 +312,7 @@ local_moran_plots_703$filename <- 'moran_703.tif'
 local_moran_plots_703$overwrite <- TRUE
 local_moran_plots_703$fun <- sum
 merged_local_moran_plots_703 <- do.call(raster::merge, local_moran_plots_703)
-#writeRaster(merged_local_moran_plots_703, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/layers/moran/local_moran_plots_703.tif", format="GTiff", overwrite = T)
+#writeRaster(merged_local_moran_plots_703, "H/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/layers/moran/local_moran_plots_703.tif", format="GTiff", overwrite = T)
 
 local_moran_plots_717 <- autocor_rasters(csm_717, matrix(c(1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1), nc=5, nr=5))
 names(local_moran_plots_717) <- NULL
@@ -367,7 +320,61 @@ local_moran_plots_717$filename <- 'moran_717.tif'
 local_moran_plots_717$overwrite <- TRUE
 local_moran_plots_717$fun <- sum
 merged_local_moran_plots_717 <- do.call(raster::merge, local_moran_plots_717)
-#writeRaster(merged_local_moran_plots_717, "Q:/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/layers/moran/local_moran_plots_717.tif", format="GTiff", overwrite = T)
+#writeRaster(merged_local_moran_plots_717, "H/My Drive/Research/Canopy_Morphology/Tobacco_Project/canopy_analysis/layers/moran/local_moran_plots_717.tif", format="GTiff", overwrite = T)
+
+# ---------------------------------------- Merge data to plots ----------------------------------------
+
+plots_619 <- plots
+plots_619 <- merge(plots_619, nutrient[Date==617], by.x="join_id", by.y='Join_ID')
+plots_703 <- plots
+#701
+plots_703 <- merge(plots_703, nutrient[Date==617], by.x="join_id", by.y='Join_ID')
+plots_717 <- plots
+#718
+plots_717 <- merge(plots_717, nutrient[Date==617], by.x="join_id", by.y='Join_ID')
+
+
+plots_619 <- merge(plots_619, spad_617, by.x="spad_id", by.y='JOIN')
+plots_703 <- merge(plots_703, spad_701, by.x="spad_id", by.y='JOIN')
+plots_717 <- merge(plots_717, spad_718, by.x="spad_id", by.y='JOIN')
+
+
+plots_619 <- merge(plots_619, varInd_df_list[[1]], by.x="plotid", by.y="plots")
+plots_703 <- merge(plots_703, varInd_df_list[[2]], by.x="plotid", by.y="plots")
+plots_717 <- merge(plots_717, varInd_df_list[[3]], by.x="plotid", by.y="plots")
+
+plots_619 <- merge(plots_619, tgi_df_list[[1]], by.x="plotid", by.y="plots")
+plots_703 <- merge(plots_703, tgi_df_list[[2]], by.x="plotid", by.y="plots")
+plots_717 <- merge(plots_717, tgi_df_list[[3]], by.x="plotid", by.y="plots")
+
+
+plots_619 <- merge(plots_619, waterDF, by.x="plotid", by.y="plots")
+plots_703 <- merge(plots_703, waterDF, by.x="plotid", by.y="plots")
+plots_717 <- merge(plots_717, waterDF, by.x="plotid", by.y="plots")
+
+
+plots_619 <- merge(plots_619, crr_df_list[[1]], by.x="plotid", by.y="plots")
+plots_703 <- merge(plots_703, crr_df_list[[2]], by.x="plotid", by.y="plots")
+plots_717 <- merge(plots_717, crr_df_list[[3]], by.x="plotid", by.y="plots")
+
+spplot(plots_717, zcol='crriqr')
+
+
+#merge all metrics into spatial polygons
+plots_619 <- merge(plots_619, ch_df_list[[1]], by.x="plotid", by.y="plots")
+plots_703 <- merge(plots_703, ch_df_list[[2]], by.x="plotid", by.y="plots")
+plots_717 <- merge(plots_717, ch_df_list[[3]], by.x="plotid", by.y="plots")
+
+
+#merge all metrics into spatial polygons
+plots_619 <- merge(plots_619, rumple_df_list[[1]], by.x="plotid", by.y="plots")
+plots_703 <- merge(plots_703, rumple_df_list[[2]], by.x="plotid", by.y="plots")
+plots_717 <- merge(plots_717, rumple_df_list[[3]], by.x="plotid", by.y="plots")
+
+plots_619 <- merge(plots_619, autocor_619, by.x="plotid", by.y="plots")
+plots_703 <- merge(plots_703, autocor_703, by.x="plotid", by.y="plots")
+plots_717 <- merge(plots_717, autocor_717, by.x="plotid", by.y="plots")
+
 
 # ------------------------------------- Aggregate plots to match nutrient observations --------------------------------------
 agg_619 <- aggregate(plots_619@data[,23:67], by = list(plots_619$join_id), FUN = mean)
@@ -382,226 +389,98 @@ agg_717 <- aggregate(plots_717@data[,23:67], by = list(plots_717$join_id), FUN =
 agg_717 <- agg_717[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,40,41,42,44,45,46)]
 names(agg_717)[15] <- "spad"
 
-# -------------------------------------------------- Normal transformation-------------------------------------------
-
-#Check for normal distribution of independent variables and transform 
+# # ------------------------------------Plot variables ------------------------------------------
+# library(ggpubr)
 # 
-# shapiro.test(agg_619$mean)
-# shapiro.test(agg_619$median)
-# shapiro.test(agg_619$sd)
-# shapiro.test(agg_619$iqr)
-# shapiro.test(agg_619$crrmedian)
-# shapiro.test(agg_619$crrmean)
-# shapiro.test(agg_619$crrsd) # not normal
-# agg_619$crrsd_ln <- transformTukey(agg_619$crrsd)
-# shapiro.test(agg_619$crriqr) # not normal
-# agg_619$crriqr_ln <- transformTukey(agg_619$crriqr)
-# shapiro.test(agg_619$skew)
-# shapiro.test(agg_619$kurt)
-# shapiro.test(agg_619$moran)
-# shapiro.test(agg_619$geary)
-# shapiro.test(agg_619$PlotCRR)
-# shapiro.test(agg_619$watersum) # not normal
-# agg_619$watersum_ln <- transformTukey(agg_619$watersum)
-# shapiro.test(agg_619$varInd_median)
-# shapiro.test(agg_619$varInd_mean)
-# shapiro.test(agg_619$varInd_sd) # not normal
-# agg_619$varInd_sd_ln <- transformTukey(agg_619$varInd_sd)
-# shapiro.test(agg_619$varInd_iqr)
-# shapiro.test(agg_619$tgi_mean) # not normal
-# agg_619$tgi_mean_ln <- transformTukey(agg_619$tgi_mean)
-# shapiro.test(agg_619$tgi_median) # not normal
-# agg_619$tgi_median_ln <- transformTukey(agg_619$tgi_median)
-# shapiro.test(agg_619$tgi_sd)
-# shapiro.test(agg_619$tgi_iqr)
+# pairs(agg_619[,c(2,21,22,43,27,42,32,33,35,36,38,39,40)], 
+#       main="Simple Scatterplot Matrix")
 # 
-# shapiro.test(agg_703$mean)
-# shapiro.test(agg_703$median)
-# shapiro.test(agg_703$sd)
-# shapiro.test(agg_703$iqr) # not normal
-# agg_703$iqr_ln <- transformTukey(agg_703$iqr)
-# shapiro.test(agg_703$crrmedian)
-# shapiro.test(agg_703$crrmean)
-# shapiro.test(agg_703$crrsd)
-# shapiro.test(agg_703$crriqr)
-# shapiro.test(agg_703$skew)
-# shapiro.test(agg_703$kurt) # not normal
-# agg_703$kurt_ln <- transformTukey(agg_703$kurt)
-# shapiro.test(agg_703$moran)
-# shapiro.test(agg_703$geary)
-# shapiro.test(agg_703$PlotCRR)
-# shapiro.test(agg_703$watersum) # not normal
-# agg_703$watersum_ln <- transformTukey(agg_703$watersum)
-# shapiro.test(agg_703$varInd_median) # not normal
-# agg_703$varInd_median_ln <- transformTukey(agg_703$varInd_median)
-# shapiro.test(agg_703$varInd_mean) # not normal
-# agg_703$varInd_mean_ln <- transformTukey(agg_703$varInd_mean)
-# shapiro.test(agg_703$varInd_sd)
-# shapiro.test(agg_703$varInd_iqr)
-# shapiro.test(agg_703$tgi_mean) # not normal
-# agg_703$tgi_mean_ln <- transformTukey(agg_703$tgi_mean)
-# shapiro.test(agg_703$tgi_median) # not normal
-# agg_703$tgi_median_ln <- transformTukey(agg_703$tgi_median)
-# shapiro.test(agg_703$tgi_sd) # not normal
-# agg_703$tgi_sd_ln <- transformTukey(agg_703$tgi_sd)
-# shapiro.test(agg_703$tgi_iqr) # not normal
-# agg_703$tgi_iqr_ln <- transformTukey(agg_703$tgi_iqr)
+# cor(agg_619[,2:40])
 # 
-# shapiro.test(agg_717$mean)
-# shapiro.test(agg_717$median)
-# shapiro.test(agg_717$sd)
-# shapiro.test(agg_717$iqr)
-# shapiro.test(agg_717$crrmedian)
-# shapiro.test(agg_717$crrmean)
-# shapiro.test(agg_717$crrsd)
-# shapiro.test(agg_717$crriqr)
-# shapiro.test(agg_717$skew)
-# shapiro.test(agg_717$kurt) # not normal, cannot transform
-# shapiro.test(agg_717$moran)
-# shapiro.test(agg_717$geary) # not normal
-# agg_717$geary_ln <- transformTukey(agg_717$geary)
-# shapiro.test(agg_717$PlotCRR)
-# shapiro.test(agg_717$watersum) # not normal
-# agg_717$watersum_ln <- transformTukey(agg_717$watersum)
-# shapiro.test(agg_717$varInd_median) # not normal
-# agg_717$varInd_median_ln <- transformTukey(agg_717$varInd_median)
-# shapiro.test(agg_717$varInd_mean)
-# shapiro.test(agg_717$varInd_sd)
-# shapiro.test(agg_717$varInd_iqr)
-# shapiro.test(agg_717$tgi_mean)
-# shapiro.test(agg_717$tgi_median)
-# shapiro.test(agg_717$tgi_sd) # not normal
-# agg_717$tgi_sd_ln <- transformTukey(agg_717$tgi_sd)
-# shapiro.test(agg_717$tgi_iqr) # not normal
-# agg_717$tgi_iqr_ln <- transformTukey(agg_717$tgi_iqr)
-# 
-# # Check for normal distribution of dependent variables
-# shapiro.test(agg_619$N)
-# agg_619$N_ln <- transformTukey(agg_619$N)
-# shapiro.test(agg_619$P)
-# shapiro.test(agg_619$K)
-# shapiro.test(agg_619$Mg)
-# shapiro.test(agg_619$Ca)
-# shapiro.test(agg_619$S)
-# shapiro.test(agg_619$Zn)
-# shapiro.test(agg_619$B)
-# agg_619$B_ln <- transformTukey(agg_619$B)
-# 
-# shapiro.test(agg_703$N)
-# agg_703$N_ln <- transformTukey(agg_703$N)
-# shapiro.test(agg_703$P)
-# shapiro.test(agg_703$K)
-# shapiro.test(agg_703$Mg)
-# shapiro.test(agg_703$Ca)
-# shapiro.test(agg_703$S)
-# shapiro.test(agg_703$Zn)
-# shapiro.test(agg_703$B)
-# agg_703$B_ln <- transformTukey(agg_703$B)
-# 
-# shapiro.test(agg_717$N)
-# agg_717$N_ln <- transformTukey(agg_717$N)
-# shapiro.test(agg_717$P)
-# shapiro.test(agg_717$K)
-# shapiro.test(agg_717$Mg)
-# shapiro.test(agg_717$Ca)
-# shapiro.test(agg_717$S)
-# shapiro.test(agg_717$Zn)
-# shapiro.test(agg_717$B)
-# agg_717$B_ln <- transformTukey(agg_717$B)
-# shapiro.test(agg_717$B_ln)
-
-# ------------------------------------Plot variables ------------------------------------------
-library(ggpubr)
-
-pairs(agg_619[,c(2,21,22,43,27,42,32,33,35,36,38,39,40)], 
-      main="Simple Scatterplot Matrix")
-
-cor(agg_619[,2:40])
-
-#plot(plots_619$mean, plots_619$BuAc)
-plot(plots_619$N, plots_619$K, xlab = "Median Height (m)", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_median <- lm(BuAc ~ median, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_median)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-2.1, 1.6))
-shapiro.test(plots_1cm$BuAc)
-
-cor.test(plots_619$N, plots_619$K)
-ggscatter(plots_1cm@data, x = "median", y = "BuAc", 
-          add = "reg.line", conf.int = TRUE, 
-          cor.coef = TRUE, cor.method = "pearson",
-          xlab = "Median Height (m)", ylab = "Yield (bu/ac)")
-
-#plot(plots_619$sum, plots_619$BuAc)
-plot(plots_619$iqr, plots_619$BuAc, xlab = "Interquartile Range (m)", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_iqr <- lm(BuAc ~ iqr, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_iqr)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-2.1, 1.6))
-
-plot(plots_619$rumple, plots_619$BuAc, xlab = "Rumple Index", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_rumple <- lm(BuAc ~ rumple, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_rumple)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-2.1, 1.6))
-
-plot(plots_619$skew, plots_619$BuAc, xlab = "Skewness", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_skew <- lm(BuAc ~ skew, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_skew)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-2.1, 1.6))
-
-plot(plots_619$kurt, plots_619$BuAc, xlab = "Kurtosis", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_kurt <- lm(BuAc ~ kurt, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_kurt)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-2.1, 1.6))
-
-#plot(plots_619$sd, plots_619$BuAc)
-plot(plots_619$crrmean, plots_619$BuAc, xlab = "CRR Mean", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_crrmean <- lm(BuAc ~ crrmean, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_crrmean)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-2.1, 1.6))
-
-plot(plots_619$crrsd, plots_619$BuAc, xlab = "CRR Standard Deviation", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_crrsd <- lm(BuAc ~ crrsd, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_crrsd)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-3.4, 1.6))
-
-#plot(plots_619$PlotCRR, plots_619$BuAc)
-# plot(plots_619$moran, plots_619$BuAc)
-# lm_moran <- lm(BuAc ~ moran, data = plots_1cm)
-# text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_moran)$r.squared, 2))), 
+# #plot(plots_619$mean, plots_619$BuAc)
+# plot(plots_619$N, plots_619$K, xlab = "Median Height (m)", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+# lm_median <- lm(BuAc ~ median, data = plots_1cm)
+# text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_median)$r.squared, 2))), 
 #      cex = 2, col = 2, adj = c(-2.1, 1.6))
-
-plot(plots_1cm$geary, plots_619$BuAc, xlab = "Geary's C", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
-lm_geary <- lm(BuAc ~ geary, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_geary)$r.squared, 2))), 
-     cex = 2, col = 2, adj = c(-3.4, 1.6))
-
-#tmp <- lm(BuAc~median, data=plots_619)
-#summary(tmp)
-#plot(plots_619$sill, plots_619$BuAc)
-#plot(plots_619$range, plots_619$BuAc)
-#plot(plots_619$Trt, plots_619$BuAc)
-plot(plots_619$AUDPC, plots_619$BuAc, xlab = "AUDPC", ylab = "Yield (bu/ac)")
-lm_audpc <- lm(BuAc ~ AUDPC, data = plots_1cm)
-text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_audpc)$r.squared, 2))), 
-     cex = 1.5, col = 2, adj = c(-6.7, 1.4))
-#plot(plots_619$watersum, plots_619$BuAc)
-#plot(plots_619$watersd, plots_619$BuAc)
-
-par(mfrow=c(1,1))
-
-# Plot histogram distribution of each variable
-histogram(plots_619$N, nint=52)
-histogram(plots_619$P, nint=52)
-histogram(plots_619$K, nint=52)
-histogram(plots_619$Mg, nint=52)
-histogram(plots_619$Ca, nint=52)
-histogram(plots_619$S, nint=52)
-histogram(plots_619$Zn, nint=52)
-histogram(plots_619$Mn, nint=52)
-histogram(plots_619$Cu, nint=30)
-histogram(plots_619$Fe, nint=30)
-histogram(plots_619$B, nint=30)
-histogram(plots_619$Al, nint=30)
-
+# shapiro.test(plots_1cm$BuAc)
+# 
+# cor.test(plots_619$N, plots_619$K)
+# ggscatter(plots_1cm@data, x = "median", y = "BuAc", 
+#           add = "reg.line", conf.int = TRUE, 
+#           cor.coef = TRUE, cor.method = "pearson",
+#           xlab = "Median Height (m)", ylab = "Yield (bu/ac)")
+# 
+# #plot(plots_619$sum, plots_619$BuAc)
+# plot(plots_619$iqr, plots_619$BuAc, xlab = "Interquartile Range (m)", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+# lm_iqr <- lm(BuAc ~ iqr, data = plots_1cm)
+# text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_iqr)$r.squared, 2))), 
+#      cex = 2, col = 2, adj = c(-2.1, 1.6))
+# 
+# plot(plots_619$rumple, plots_619$BuAc, xlab = "Rumple Index", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+# lm_rumple <- lm(BuAc ~ rumple, data = plots_1cm)
+# text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_rumple)$r.squared, 2))), 
+#      cex = 2, col = 2, adj = c(-2.1, 1.6))
+# 
+# plot(plots_619$skew, plots_619$BuAc, xlab = "Skewness", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+# lm_skew <- lm(BuAc ~ skew, data = plots_1cm)
+# text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_skew)$r.squared, 2))), 
+#      cex = 2, col = 2, adj = c(-2.1, 1.6))
+# 
+# plot(plots_619$kurt, plots_619$BuAc, xlab = "Kurtosis", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+# lm_kurt <- lm(BuAc ~ kurt, data = plots_1cm)
+# text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_kurt)$r.squared, 2))), 
+#      cex = 2, col = 2, adj = c(-2.1, 1.6))
+# 
+# #plot(plots_619$sd, plots_619$BuAc)
+# plot(plots_619$crrmean, plots_619$BuAc, xlab = "CRR Mean", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+# lm_crrmean <- lm(BuAc ~ crrmean, data = plots_1cm)
+# text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_crrmean)$r.squared, 2))), 
+#      cex = 2, col = 2, adj = c(-2.1, 1.6))
+# 
+# plot(plots_619$crrsd, plots_619$BuAc, xlab = "CRR Standard Deviation", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+# lm_crrsd <- lm(BuAc ~ crrsd, data = plots_1cm)
+# text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_crrsd)$r.squared, 2))), 
+#      cex = 2, col = 2, adj = c(-3.4, 1.6))
+# 
+# #plot(plots_619$PlotCRR, plots_619$BuAc)
+# # plot(plots_619$moran, plots_619$BuAc)
+# # lm_moran <- lm(BuAc ~ moran, data = plots_1cm)
+# # text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_moran)$r.squared, 2))), 
+# #      cex = 2, col = 2, adj = c(-2.1, 1.6))
+# 
+# plot(plots_1cm$geary, plots_619$BuAc, xlab = "Geary's C", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
+# lm_geary <- lm(BuAc ~ geary, data = plots_1cm)
+# text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_geary)$r.squared, 2))), 
+#      cex = 2, col = 2, adj = c(-3.4, 1.6))
+# 
+# #tmp <- lm(BuAc~median, data=plots_619)
+# #summary(tmp)
+# #plot(plots_619$sill, plots_619$BuAc)
+# #plot(plots_619$range, plots_619$BuAc)
+# #plot(plots_619$Trt, plots_619$BuAc)
+# plot(plots_619$AUDPC, plots_619$BuAc, xlab = "AUDPC", ylab = "Yield (bu/ac)")
+# lm_audpc <- lm(BuAc ~ AUDPC, data = plots_1cm)
+# text(par()$usr[1], par()$usr[4], bquote(R^2 ~ "=" ~ .(round(summary(lm_audpc)$r.squared, 2))), 
+#      cex = 1.5, col = 2, adj = c(-6.7, 1.4))
+# #plot(plots_619$watersum, plots_619$BuAc)
+# #plot(plots_619$watersd, plots_619$BuAc)
+# 
+# par(mfrow=c(1,1))
+# 
+# # Plot histogram distribution of each variable
+# histogram(agg_619$N, nint=40)
+# histogram(agg_619$P, nint=40)
+# histogram(agg_619$K, nint=40)
+# histogram(agg_619$Mg, nint=40)
+# histogram(agg_619$Ca, nint=40)
+# histogram(agg_619$S, nint=40)
+# histogram(agg_619$Zn, nint=40)
+# histogram(agg_619$Mn, nint=40)
+# histogram(agg_619$Cu, nint=40)
+# histogram(agg_619$Fe, nint=40)
+# histogram(agg_619$B, nint=40)
+# histogram(agg_619$Al, nint=40)
+# 
 
 # --------------------------------------- Stats data prep --------------------------------------------------------------------------------
 grouped_soils <- function(x)
@@ -750,9 +629,9 @@ vif_func<-function(in_frame,thresh=10,trace=T,...){
   
 }
 
-xvar_619 <- norm_619[,15:39]
-xvar_703 <- norm_703[,15:39]
-xvar_717 <- norm_717[,15:39]
+xvar_619 <- z_619[,c(19:35,37:39)] # omit PlotCRR and VARI
+xvar_703 <- z_703[,c(19:35,37:39)]
+xvar_717 <- z_717[,c(19:35,37:39)]
 
 xkeep_all_619 <- vif_func(xvar_619, 4, F)
 xkeep_all_703 <- vif_func(xvar_703, 4, F)
@@ -767,7 +646,12 @@ xkeep_spec_703 <- xkeep_all_703[1:2]
 xkeep_struct_717 <- xkeep_all_717[3:9]
 xkeep_spec_717 <- xkeep_all_717[1:2]
 
-yvar <- c("N","P","K","B","Ca","Mg","S","Zn")
+yvar <- c("N","P","K","Mg","Ca","S","Zn", "Mn", "Cu", "B")
+
+
+tmp <- lm(N ~ mean+kurt+rumple+crrmedian+crriqr+moran+watersum, data=z_619)
+vif(tmp)
+
 
 lm_compare <- function(y, xkeep, data){
   xvars <- paste(xkeep,collapse='+')
@@ -790,9 +674,9 @@ topmod_res <- function(y, xkeep, data){
   topmod
 }
 
-xvars_all_fixed <- c("tgi_mean","tgi_sd","watersum","crrmedian","crriqr","mean","kurt","rumple","moran","geary")
+xvars_all_fixed <- c("tgi_mean","tgi_sd","watersum","crrmedian","crriqr","mean","kurt","rumple","moran")
 xvars_spec_fixed <- xvars_all_fixed[1:2]
-xvars_struc_fixed <- xvars_all_fixed[3:10]
+xvars_struc_fixed <- xvars_all_fixed[3:9]
 
 # ---------------------------------- Structural LMs ----------------------------------------------
 struc_619 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_619)
@@ -885,46 +769,55 @@ write.csv(bind_rows(spec_struc_717_all, .id = "column_label"), "results/spec_str
 
 
 #--------------------------------------------plots --------------------------------------------------
+library(ggplot2)
+
 #619
 
 struc_619$type <- "structural"
 spec_619$type <- "spectral"
 spec_struc_619$type <- "spectral+structural"
-all_619 <- rbind(struc_619[,15:17], spec_619[,9:11], spec_struc_619[,17:19])
+all_619 <- rbind(struc_619[,14:16], spec_619[,9:11], spec_struc_619[,16:18])
 
-library(ggplot2)
-all_619$yvar <- factor(all_619$yvar,levels = c("N", "P", "K", "Ca", "Mg", "S", "B", "Zn"))
+
+all_619$yvar <- factor(all_619$yvar,levels = c("N","P","K","Mg","Ca","S","Zn", "Mn", "Cu", "B"))
 all_619$type <- factor(all_619$type, levels = c("structural", "spectral", "spectral+structural"))
 
 ggplot(data=all_619, aes(x=yvar, y=adj_r2, fill=type)) +
   geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
-  xlab('nutrient') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.8)
+  xlab('nutrient') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.85) + ggtitle("June 19")
 
 #703
 
 struc_703$type <- "structural"
 spec_703$type <- "spectral"
 spec_struc_703$type <- "spectral+structural"
-all_703 <- rbind(struc_703[,15:17], spec_703[,9:11], spec_struc_703[,17:19])
+all_703 <- rbind(struc_703[,14:16], spec_703[,9:11], spec_struc_703[,16:18])
 
-library(ggplot2)
-all_703$yvar <- factor(all_703$yvar,levels = c("N", "P", "K", "Ca", "Mg", "S", "B", "Zn"))
+all_703$yvar <- factor(all_703$yvar,levels = c("N","P","K","Mg","Ca","S","Zn", "Mn", "Cu", "B"))
 all_703$type <- factor(all_703$type, levels = c("structural", "spectral", "spectral+structural"))
 
 ggplot(data=all_703, aes(x=yvar, y=adj_r2, fill=type)) +
   geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
-  xlab('nutrient') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.8)
+  xlab('nutrient') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.85)  + ggtitle("July 3")
 #717
 
 struc_717$type <- "structural"
 spec_717$type <- "spectral"
 spec_struc_717$type <- "spectral+structural"
-all_717 <- rbind(struc_717[,15:17], spec_717[,9:11], spec_struc_717[,17:19])
+all_717 <- rbind(struc_717[,14:16], spec_717[,9:11], spec_struc_717[,16:18])
 
-library(ggplot2)
-all_717$yvar <- factor(all_717$yvar,levels = c("N", "P", "K", "Ca", "Mg", "S", "B", "Zn"))
+all_717$yvar <- factor(all_717$yvar,levels = c("N","P","K","Mg","Ca","S","Zn", "Mn", "Cu", "B"))
 all_717$type <- factor(all_717$type, levels = c("structural", "spectral", "spectral+structural"))
 
 ggplot(data=all_717, aes(x=yvar, y=adj_r2, fill=type)) +
   geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
-  xlab('nutrient') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.8)
+  xlab('nutrient') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.85) + ggtitle("July 17")
+
+
+# -----------------------------tables-----------------------------
+
+library(stargazer)
+
+stargazer(plots_619@data[,c(xvars_all_fixed,yvar)])
+stargazer(struc_mods_717)
+                         
