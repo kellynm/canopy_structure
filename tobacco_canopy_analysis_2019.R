@@ -1,28 +1,34 @@
-library(raster)
-library(rgdal)
+# data mgmt
 library(data.table)
 library(plyr)
 library(lattice)
 library(gridExtra)
-library(velox)
-library(rgeos)
-library(gstat)
-library(usdm)
 library(viridis)
 library(ggpubr)
 library(foreign)
+library(tidyr)
+library(graphics)
+library(tibble)
+library(dplyr)
+
+# spatial
+library(raster)
+library(rgdal)
+library(velox)
+library(rgeos)
+library(usdm)
+
+# statistics
+library(gstat)
 library(car)
 library(PerformanceAnalytics)
 library(rcompanion)
 library(olsrr)
 library(fastDummies)
-library(tidyr)
-library(graphics)
 library(lme4)
 library(MuMIn)
 library(spdep)
-library(tibble)
-library(dplyr)
+
 
 #Load raster data for all dates
 setwd("H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019")
@@ -654,7 +660,7 @@ vif(tmp)
 
 
 lm_compare <- function(y, xkeep, data){
-  xvars <- paste(xkeep,collapse='+')
+  xvars <- paste(c("0", xkeep),collapse='+')
   eq<-as.formula(paste(y, xvars, sep="~"))
   mod1<-lm(eq,data=data, na.action=na.fail)
   modsel <- dredge(mod1)
@@ -666,7 +672,7 @@ lm_compare <- function(y, xkeep, data){
 }
 
 topmod_res <- function(y, xkeep, data){
-  xvars <- paste(xkeep,collapse='+')
+  xvars <- paste(c("0", xkeep),collapse='+')
   eq<-as.formula(paste(y, xvars, sep="~"))
   mod1<-lm(eq,data=data, na.action=na.fail)
   modsel <- dredge(mod1)
@@ -674,9 +680,9 @@ topmod_res <- function(y, xkeep, data){
   topmod
 }
 
-xvars_all_fixed <- c("tgi_mean","tgi_sd","watersum","crrmedian","crriqr","mean","kurt","rumple","moran")
-xvars_spec_fixed <- xvars_all_fixed[1:2]
-xvars_struc_fixed <- xvars_all_fixed[3:9]
+xvars_all_fixed <- c("mean","kurt","rumple","crrmedian","crriqr","moran","watersum","tgi_mean","tgi_sd")
+xvars_spec_fixed <- xvars_all_fixed[8:9]
+xvars_struc_fixed <- xvars_all_fixed[1:7]
 
 # ---------------------------------- Structural LMs ----------------------------------------------
 struc_619 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_619)
@@ -776,7 +782,7 @@ library(ggplot2)
 struc_619$type <- "structural"
 spec_619$type <- "spectral"
 spec_struc_619$type <- "spectral+structural"
-all_619 <- rbind(struc_619[,14:16], spec_619[,9:11], spec_struc_619[,16:18])
+all_619 <- rbind(struc_619[,13:15], spec_619[,8:10], spec_struc_619[,15:17])
 
 
 all_619$yvar <- factor(all_619$yvar,levels = c("N","P","K","Mg","Ca","S","Zn", "Mn", "Cu", "B"))
@@ -791,7 +797,7 @@ ggplot(data=all_619, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_703$type <- "structural"
 spec_703$type <- "spectral"
 spec_struc_703$type <- "spectral+structural"
-all_703 <- rbind(struc_703[,14:16], spec_703[,9:11], spec_struc_703[,16:18])
+all_703 <- rbind(struc_703[,13:15], spec_703[,8:10], spec_struc_703[,15:17])
 
 all_703$yvar <- factor(all_703$yvar,levels = c("N","P","K","Mg","Ca","S","Zn", "Mn", "Cu", "B"))
 all_703$type <- factor(all_703$type, levels = c("structural", "spectral", "spectral+structural"))
@@ -804,7 +810,7 @@ ggplot(data=all_703, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_717$type <- "structural"
 spec_717$type <- "spectral"
 spec_struc_717$type <- "spectral+structural"
-all_717 <- rbind(struc_717[,14:16], spec_717[,9:11], spec_struc_717[,16:18])
+all_717 <- rbind(struc_717[,13:15], spec_717[,8:10], spec_struc_717[,15:17])
 
 all_717$yvar <- factor(all_717$yvar,levels = c("N","P","K","Mg","Ca","S","Zn", "Mn", "Cu", "B"))
 all_717$type <- factor(all_717$type, levels = c("structural", "spectral", "spectral+structural"))
@@ -818,6 +824,101 @@ ggplot(data=all_717, aes(x=yvar, y=adj_r2, fill=type)) +
 
 library(stargazer)
 
-stargazer(plots_619@data[,c(xvars_all_fixed,yvar)])
-stargazer(struc_mods_717)
-                         
+n_struc_mods <- list(struc_mods_619[[1]], struc_mods_703[[1]], struc_mods_717[[1]])
+stargazer(n_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "Rumple index", "canopy relief ratio median", 
+                               "canopy relief ratio IQR", "Moran's I", "water accumulation (m)"))
+
+n_spec_mods <- list(spec_mods_619[[1]], spec_mods_703[[1]], spec_mods_717[[1]])
+stargazer(n_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("TGI mean", "TGI standard deviation"))
+
+n_spec_struc_mods <- list(spec_struc_mods_619[[1]], spec_struc_mods_703[[1]], spec_struc_mods_717[[1]])
+stargazer(n_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("crop height mean (m)", "TGI mean", "crop height histogram kurtosis", "Rumple index", "canopy relief ratio median", 
+                               "Moran's I", "water accumulation (m)", "TGI standard deviation"))
+
+
+p_struc_mods <- list(struc_mods_619[[2]], struc_mods_703[[2]], struc_mods_717[[2]])
+stargazer(p_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "Rumple index"))
+
+p_spec_mods <- list(spec_mods_619[[2]], spec_mods_703[[2]], spec_mods_717[[2]])
+stargazer(p_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("TGI mean", "TGI standard deviation"))
+
+p_spec_struc_mods <- list(spec_struc_mods_619[[2]], spec_struc_mods_703[[2]], spec_struc_mods_717[[2]])
+stargazer(p_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("crop height mean (m)", "TGI mean", "crop height histogram kurtosis", "Rumple index",
+                               "canopy relief ratio IQR", "water accumulation (m)", "TGI standard deviation"))
+
+k_struc_mods <- list(struc_mods_619[[3]], struc_mods_703[[3]], struc_mods_717[[3]])
+stargazer(k_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("Rumple index", "canopy relief ratio median"))
+
+k_spec_mods <- list(spec_mods_619[[3]], spec_mods_703[[3]], spec_mods_717[[3]])
+stargazer(k_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("TGI mean", "TGI standard deviation"))
+
+k_spec_struc_mods <- list(spec_struc_mods_619[[3]], spec_struc_mods_703[[3]], spec_struc_mods_717[[3]])
+stargazer(k_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("TGI mean", "canopy relief ratio median",
+                               "canopy relief ratio IQR","Moran's I", "water accumulation (m)", "TGI standard deviation"))
+
+
+mg_struc_mods <- list(struc_mods_619[[4]], struc_mods_703[[4]], struc_mods_717[[4]])
+stargazer(mg_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "Rumple index", "canopy relief ratio median", 
+                               "Moran's I"))
+
+mg_spec_mods <- list(spec_mods_619[[4]], spec_mods_703[[4]], spec_mods_717[[4]])
+stargazer(mg_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("TGI mean", "TGI standard deviation"))
+
+mg_spec_struc_mods <- list(spec_struc_mods_619[[4]], spec_struc_mods_703[[4]], spec_struc_mods_717[[4]])
+stargazer(mg_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("crop height mean (m)", "TGI mean", "crop height histogram kurtosis", "Rumple index","canopy relief ratio median",
+                               "canopy relief ratio IQR","Moran's I", "TGI standard deviation"))
+
+
+ca_struc_mods <- list(struc_mods_619[[5]], struc_mods_717[[5]])
+stargazer(ca_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("crop height histogram kurtosis","canopy relief ratio IQR","Moran's I"))
+
+ca_spec_mods <- list(spec_mods_717[[5]])
+stargazer(ca_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("TGI mean"))
+
+ca_spec_struc_mods <- list(spec_struc_mods_619[[5]], spec_struc_mods_717[[5]])
+stargazer(ca_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c( "crop height histogram kurtosis","canopy relief ratio IQR","Moran's I"))
+
+
+s_struc_mods <- list(struc_mods_619[[6]], struc_mods_703[[6]], struc_mods_717[[6]])
+stargazer(s_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("crop height mean (m)","Rumple index","canopy relief ratio median"))
+
+s_spec_mods <- list(spec_mods_619[[6]], spec_mods_703[[6]], spec_mods_717[[6]])
+stargazer(s_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("TGI mean", "TGI standard deviation"))
+
+s_spec_struc_mods <- list(spec_struc_mods_619[[6]], spec_struc_mods_703[[6]], spec_struc_mods_717[[6]])
+stargazer(s_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("crop height mean (m)", "TGI mean", "Rumple index","canopy relief ratio median", "TGI standard deviation"))
+
+
+b_struc_mods <- list(struc_mods_619[[10]], struc_mods_703[[10]], struc_mods_717[[10]])
+stargazer(b_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "Rumple index", "canopy relief ratio median",
+                               "canopy relief ratio IQR","Moran's I"))
+
+b_spec_mods <- list(spec_mods_619[[10]], spec_mods_703[[10]], spec_mods_717[[10]])
+stargazer(b_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("TGI mean", "TGI standard deviation"))
+
+b_spec_struc_mods <- list(spec_struc_mods_619[[10]], spec_struc_mods_703[[10]], spec_struc_mods_717[[10]])
+stargazer(b_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("crop height mean (m)", "TGI mean", "crop height histogram kurtosis", "Rumple index","canopy relief ratio median",
+                               "canopy relief ratio IQR","Moran's I"))
+
+
