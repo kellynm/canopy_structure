@@ -774,7 +774,7 @@ spec_struc_717_all <- lapply(spec_struc_mods_717, get_coef)
 write.csv(bind_rows(spec_struc_717_all, .id = "column_label"), "results/spec_struc_717_coefs.csv")
 
 
-#--------------------------------------------plots --------------------------------------------------
+#-------------------------------------------- by date plots --------------------------------------------------
 library(ggplot2)
 
 #619
@@ -782,7 +782,7 @@ library(ggplot2)
 struc_619$type <- "structural"
 spec_619$type <- "spectral"
 spec_struc_619$type <- "spectral+structural"
-all_619 <- rbind(struc_619[,13:15], spec_619[,8:10], spec_struc_619[,15:17])
+all_619 <- rbind(struc_619[c(1:6,10),13:15], spec_619[c(1:6,10),8:10], spec_struc_619[c(1:6,10),15:17])
 
 
 all_619$yvar <- factor(all_619$yvar,levels = c("N","P","K","Mg","Ca","S","Zn", "Mn", "Cu", "B"))
@@ -797,7 +797,7 @@ ggplot(data=all_619, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_703$type <- "structural"
 spec_703$type <- "spectral"
 spec_struc_703$type <- "spectral+structural"
-all_703 <- rbind(struc_703[,13:15], spec_703[,8:10], spec_struc_703[,15:17])
+all_703 <- rbind(struc_703[c(1:6,10),13:15], spec_703[c(1:6,10),8:10], spec_struc_703[c(1:6,10),15:17])
 
 all_703$yvar <- factor(all_703$yvar,levels = c("N","P","K","Mg","Ca","S","Zn", "Mn", "Cu", "B"))
 all_703$type <- factor(all_703$type, levels = c("structural", "spectral", "spectral+structural"))
@@ -810,7 +810,7 @@ ggplot(data=all_703, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_717$type <- "structural"
 spec_717$type <- "spectral"
 spec_struc_717$type <- "spectral+structural"
-all_717 <- rbind(struc_717[,13:15], spec_717[,8:10], spec_struc_717[,15:17])
+all_717 <- rbind(struc_717[c(1:6,10),13:15], spec_717[c(1:6,10),8:10], spec_struc_717[c(1:6,10),15:17])
 
 all_717$yvar <- factor(all_717$yvar,levels = c("N","P","K","Mg","Ca","S","Zn", "Mn", "Cu", "B"))
 all_717$type <- factor(all_717$type, levels = c("structural", "spectral", "spectral+structural"))
@@ -820,9 +820,132 @@ ggplot(data=all_717, aes(x=yvar, y=adj_r2, fill=type)) +
   xlab('nutrient') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.85) + ggtitle("July 17")
 
 
+
+#-------------------------------------------- by nutrient plots --------------------------------------------------
+
+#N
+N_613 <- rbind(struc_619[1,13:15], spec_619[1,8:10], spec_struc_703[1,15:17])
+N_613$Date <- "June 13"
+N_703 <- rbind(struc_703[1,13:15], spec_703[1,8:10], spec_struc_703[1,15:17])
+N_703$Date <- "July 3"
+N_717 <- rbind(struc_717[1,13:15], spec_717[1,8:10], spec_struc_717[1,15:17])
+N_717$Date <- "July 17"
+N_all <- rbind(N_613, N_703, N_717)
+
+N_all$Date <- factor(N_all$Date, levels = c("June 13", "July 3", "July 17"))
+N_all$type <- factor(N_all$type, levels = c("structural", "spectral", "spectral+structural"))
+
+ggplot(data=N_all, aes(x=Date, y=adj_r2, fill=type)) +
+  geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
+  xlab('date') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.85) + ggtitle("Nitrogen")
+
+
+#P
+P_613 <- rbind(struc_619[2,13:15], spec_619[2,8:10], spec_struc_703[2,15:17])
+P_613$Date <- "June 13"
+P_703 <- rbind(struc_703[2,13:15], spec_703[2,8:10], spec_struc_703[2,15:17])
+P_703$Date <- "July 3"
+P_717 <- rbind(struc_717[2,13:15], spec_717[2,8:10], spec_struc_717[2,15:17])
+P_717$Date <- "July 17"
+P_all <- rbind(P_613, P_703, P_717)
+
+P_all$Date <- factor(P_all$Date, levels = c("June 13", "July 3", "July 17"))
+P_all$type <- factor(P_all$type, levels = c("structural", "spectral", "spectral+structural"))
+
+ggplot(data=P_all, aes(x=Date, y=adj_r2, fill=type)) +
+  geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
+  xlab('date') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.85) + ggtitle("Phosphorous")
+
+
+#K
+K_613 <- rbind(struc_619[3,13:15], spec_619[3,8:10], spec_struc_703[3,15:17])
+K_613$Date <- "June 13"
+K_703 <- rbind(struc_703[3,13:15], spec_703[3,8:10], spec_struc_703[3,15:17])
+K_703$Date <- "July 3"
+K_717 <- rbind(struc_717[3,13:15], spec_717[3,8:10], spec_struc_717[3,15:17])
+K_717$Date <- "July 17"
+K_all <- rbind(K_613, K_703, K_717)
+
+K_all$Date <- factor(K_all$Date, levels = c("June 13", "July 3", "July 17"))
+K_all$type <- factor(K_all$type, levels = c("structural", "spectral", "spectral+structural"))
+
+ggplot(data=K_all, aes(x=Date, y=adj_r2, fill=type)) +
+  geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
+  xlab('date') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.85) + ggtitle("Potassium")
+
+
+#Mg
+Mg_613 <- rbind(struc_619[4,13:15], spec_619[4,8:10], spec_struc_703[4,15:17])
+Mg_613$Date <- "June 13"
+Mg_703 <- rbind(struc_703[4,13:15], spec_703[4,8:10], spec_struc_703[4,15:17])
+Mg_703$Date <- "July 3"
+Mg_717 <- rbind(struc_717[4,13:15], spec_717[4,8:10], spec_struc_717[4,15:17])
+Mg_717$Date <- "July 17"
+Mg_all <- rbind(Mg_613, Mg_703, Mg_717)
+
+Mg_all$Date <- factor(Mg_all$Date, levels = c("June 13", "July 3", "July 17"))
+Mg_all$type <- factor(Mg_all$type, levels = c("structural", "spectral", "spectral+structural"))
+
+ggplot(data=Mg_all, aes(x=Date, y=adj_r2, fill=type)) +
+  geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
+  xlab('date') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.85) + ggtitle("Magnesium")
+
+
+#Ca
+Ca_613 <- rbind(struc_619[5,13:15], spec_619[5,8:10], spec_struc_703[5,15:17])
+Ca_613$Date <- "June 13"
+Ca_703 <- rbind(struc_703[5,13:15], spec_703[5,8:10], spec_struc_703[5,15:17])
+Ca_703$Date <- "July 3"
+Ca_717 <- rbind(struc_717[5,13:15], spec_717[5,8:10], spec_struc_717[5,15:17])
+Ca_717$Date <- "July 17"
+Ca_all <- rbind(Ca_613, Ca_703, Ca_717)
+
+Ca_all$Date <- factor(Ca_all$Date, levels = c("June 13", "July 3", "July 17"))
+Ca_all$type <- factor(Ca_all$type, levels = c("structural", "spectral", "spectral+structural"))
+
+ggplot(data=Ca_all, aes(x=Date, y=adj_r2, fill=type)) +
+  geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
+  xlab('date') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.85) + ggtitle("Calcium")
+
+
+#S
+S_613 <- rbind(struc_619[6,13:15], spec_619[6,8:10], spec_struc_703[6,15:17])
+S_613$Date <- "June 13"
+S_703 <- rbind(struc_703[6,13:15], spec_703[6,8:10], spec_struc_703[6,15:17])
+S_703$Date <- "July 3"
+S_717 <- rbind(struc_717[6,13:15], spec_717[6,8:10], spec_struc_717[6,15:17])
+S_717$Date <- "July 17"
+S_all <- rbind(S_613, S_703, S_717)
+
+S_all$Date <- factor(S_all$Date, levels = c("June 13", "July 3", "July 17"))
+S_all$type <- factor(S_all$type, levels = c("structural", "spectral", "spectral+structural"))
+
+ggplot(data=S_all, aes(x=Date, y=adj_r2, fill=type)) +
+  geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
+  xlab('date') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.85) + ggtitle("Sulfur")
+
+
+#B
+B_613 <- rbind(struc_619[10,13:15], spec_619[10,8:10], spec_struc_703[10,15:17])
+B_613$Date <- "June 13"
+B_703 <- rbind(struc_703[10,13:15], spec_703[10,8:10], spec_struc_703[10,15:17])
+B_703$Date <- "July 3"
+B_717 <- rbind(struc_717[10,13:15], spec_717[10,8:10], spec_struc_717[10,15:17])
+B_717$Date <- "July 17"
+B_all <- rbind(B_613, B_703, B_717)
+
+B_all$Date <- factor(B_all$Date, levels = c("June 13", "July 3", "July 17"))
+B_all$type <- factor(B_all$type, levels = c("structural", "spectral", "spectral+structural"))
+
+ggplot(data=B_all, aes(x=Date, y=adj_r2, fill=type)) +
+  geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
+  xlab('date') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.85) + ggtitle("Boron")
+
 # -----------------------------tables-----------------------------
 
 library(stargazer)
+
+# Regression model tables
 
 n_struc_mods <- list(struc_mods_619[[1]], struc_mods_703[[1]], struc_mods_717[[1]])
 stargazer(n_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
@@ -921,4 +1044,6 @@ stargazer(b_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single
           covariate.labels = c("crop height mean (m)", "TGI mean", "crop height histogram kurtosis", "Rumple index","canopy relief ratio median",
                                "canopy relief ratio IQR","Moran's I"))
 
+# Nutrient summary tables
 
+stargazer(plots_619@data[,c(23:28, 33)])
