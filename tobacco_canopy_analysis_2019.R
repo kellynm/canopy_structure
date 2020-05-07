@@ -10,6 +10,13 @@ library(tidyr)
 library(graphics)
 library(tibble)
 library(dplyr)
+library(stargazer)
+library(ggplot2)
+library(ggthemes)
+library(scales)
+library(magrittr)
+#devtools::install_github("cardiomoon/ztable")
+library(ztable)
 
 # spatial
 library(raster)
@@ -31,7 +38,7 @@ library(spdep)
 
 
 #Load raster data for all dates
-setwd("H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019")
+setwd("G:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019")
 
 tobacco_area <- readOGR("H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/layers/boundary", "wilson19_boundary", stringsAsFactors = F)
 tobacco_area <- spTransform(tobacco_area, CRS("+proj=lcc +lat_1=36.16666666666666 +lat_2=34.33333333333334 +lat_0=33.75 +lon_0=-79 +x_0=609601.22 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"))
@@ -331,14 +338,8 @@ merged_local_moran_plots_717 <- do.call(raster::merge, local_moran_plots_717)
 # ---------------------------------------- Merge data to plots ----------------------------------------
 
 plots_619 <- plots
-plots_619 <- merge(plots_619, nutrient[Date==617], by.x="join_id", by.y='Join_ID')
 plots_703 <- plots
-#701
-plots_703 <- merge(plots_703, nutrient[Date==617], by.x="join_id", by.y='Join_ID')
 plots_717 <- plots
-#718
-plots_717 <- merge(plots_717, nutrient[Date==617], by.x="join_id", by.y='Join_ID')
-
 
 plots_619 <- merge(plots_619, spad_617, by.x="spad_id", by.y='JOIN')
 plots_703 <- merge(plots_703, spad_701, by.x="spad_id", by.y='JOIN')
@@ -363,8 +364,6 @@ plots_619 <- merge(plots_619, crr_df_list[[1]], by.x="plotid", by.y="plots")
 plots_703 <- merge(plots_703, crr_df_list[[2]], by.x="plotid", by.y="plots")
 plots_717 <- merge(plots_717, crr_df_list[[3]], by.x="plotid", by.y="plots")
 
-spplot(plots_717, zcol='crriqr')
-
 
 #merge all metrics into spatial polygons
 plots_619 <- merge(plots_619, ch_df_list[[1]], by.x="plotid", by.y="plots")
@@ -383,25 +382,34 @@ plots_717 <- merge(plots_717, autocor_717, by.x="plotid", by.y="plots")
 
 
 # ------------------------------------- Aggregate plots to match nutrient observations --------------------------------------
-agg_619 <- aggregate(plots_619@data[,23:67], by = list(plots_619$join_id), FUN = mean)
-agg_619 <- agg_619[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,40,41,42,44,45,46)]
-names(agg_619)[15] <- "spad"
+agg_619 <- aggregate(plots_619@data[,18:46], by = list(plots_619$join_id), FUN = mean)
+agg_703 <- aggregate(plots_703@data[,18:46], by = list(plots_703$join_id), FUN = mean)
+agg_717 <- aggregate(plots_717@data[,18:46], by = list(plots_717$join_id), FUN = mean)
 
-agg_703 <- aggregate(plots_703@data[,23:67], by = list(plots_703$join_id), FUN = mean)
-agg_703 <- agg_703[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,40,41,42,44,45,46)]
-names(agg_703)[15] <- "spad"
+agg_619_nut1 <- merge(agg_619, nutrient[Date==617], by.x="Group.1", by.y='Join_ID')
+names(agg_619_nut1)[2] <- "spad"
 
-agg_717 <- aggregate(plots_717@data[,23:67], by = list(plots_717$join_id), FUN = mean)
-agg_717 <- agg_717[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,40,41,42,44,45,46)]
-names(agg_717)[15] <- "spad"
+agg_703_nut1 <- merge(agg_703, nutrient[Date==617], by.x="Group.1", by.y='Join_ID')
+names(agg_703_nut1)[2] <- "spad"
+
+agg_703_nut2 <- merge(agg_703, nutrient[Date==701], by.x="Group.1", by.y='Join_ID')
+names(agg_703_nut2)[2] <- "spad"
+
+agg_717_nut1 <- merge(agg_717, nutrient[Date==617], by.x="Group.1", by.y='Join_ID')
+names(agg_717_nut1)[2] <- "spad"
+
+agg_717_nut2 <- merge(agg_717, nutrient[Date==701], by.x="Group.1", by.y='Join_ID')
+names(agg_717_nut2)[2] <- "spad"
+
+agg_717_nut3 <- merge(agg_717, nutrient[Date==718], by.x="Group.1", by.y='Join_ID')
+names(agg_717_nut3)[2] <- "spad"
 
 # # ------------------------------------Plot variables ------------------------------------------
-# library(ggpubr)
+library(ggpubr)
 # 
-# pairs(agg_619[,c(2,21,22,43,27,42,32,33,35,36,38,39,40)], 
-#       main="Simple Scatterplot Matrix")
-# 
-# cor(agg_619[,2:40])
+pairs(z_619[,c(20, 21, 26, 29, 31, 32, 34, 35,37, 38)], main="Simple Scatterplot Matrix")
+
+cor(z_619[,c(19:35,37:39)])
 # 
 # #plot(plots_619$mean, plots_619$BuAc)
 # plot(plots_619$N, plots_619$K, xlab = "Median Height (m)", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
@@ -489,30 +497,30 @@ names(agg_717)[15] <- "spad"
 # 
 
 # --------------------------------------- Stats data prep --------------------------------------------------------------------------------
-grouped_soils <- function(x)
-{
-  paste(as.vector(sort(plots_619$soil[plots_619$join_id == x]))[1],as.vector(sort(plots_619$soil[plots_619$join_id == x]))[2],as.vector(sort(plots_619$soil[plots_619$join_id == x]))[3], sep = "_")
-  
-}
-
-groups <- unique(plots_619$join_id)
-soils <- sapply(groups, grouped_soils)
-groups <- as.data.frame(groups)
-groups$soils <- as.factor(soils)
-
-agg_619 <- merge(agg_619, groups, by.x="Group.1", by.y="groups")
-agg_619$treatment <- tstrsplit(agg_619$Group.1, "_")[[2]]
-agg_619$fert <- tstrsplit(agg_619$Group.1, "_")[[1]]
-agg_703 <- merge(agg_703, groups, by.x="Group.1", by.y="groups")
-agg_703$treatment <- tstrsplit(agg_703$Group.1, "_")[[2]]
-agg_703$fert <- tstrsplit(agg_703$Group.1, "_")[[1]]
-agg_717 <- merge(agg_717, groups, by.x="Group.1", by.y="groups")
-agg_717$treatment <- tstrsplit(agg_717$Group.1, "_")[[2]]
-agg_717$fert <- tstrsplit(agg_717$Group.1, "_")[[1]]
-
-write.csv(agg_619, "results/data_619.csv")
-write.csv(agg_703, "results/data_703.csv")
-write.csv(agg_717, "results/data_717.csv")
+# grouped_soils <- function(x)
+# {
+#   paste(as.vector(sort(plots_619$soil[plots_619$join_id == x]))[1],as.vector(sort(plots_619$soil[plots_619$join_id == x]))[2],as.vector(sort(plots_619$soil[plots_619$join_id == x]))[3], sep = "_")
+#   
+# }
+# 
+# groups <- unique(plots_619$join_id)
+# soils <- sapply(groups, grouped_soils)
+# groups <- as.data.frame(groups)
+# groups$soils <- as.factor(soils)
+# 
+# agg_619 <- merge(agg_619, groups, by.x="Group.1", by.y="groups")
+# agg_619$treatment <- tstrsplit(agg_619$Group.1, "_")[[2]]
+# agg_619$fert <- tstrsplit(agg_619$Group.1, "_")[[1]]
+# agg_703 <- merge(agg_703, groups, by.x="Group.1", by.y="groups")
+# agg_703$treatment <- tstrsplit(agg_703$Group.1, "_")[[2]]
+# agg_703$fert <- tstrsplit(agg_703$Group.1, "_")[[1]]
+# agg_717 <- merge(agg_717, groups, by.x="Group.1", by.y="groups")
+# agg_717$treatment <- tstrsplit(agg_717$Group.1, "_")[[2]]
+# agg_717$fert <- tstrsplit(agg_717$Group.1, "_")[[1]]
+# 
+# write.csv(agg_619, "results/data_619.csv")
+# write.csv(agg_703, "results/data_703.csv")
+# write.csv(agg_717, "results/data_717.csv")
 
 normalize <- function(x)
 {
@@ -521,44 +529,71 @@ normalize <- function(x)
 
 
 #minmax normalization of data
-norm_619 <- as.data.frame(normalize(agg_619[,2:40]))
-norm_619$Id <- agg_619$Group.1
-norm_619$treatment <- agg_619$treatment
-norm_619$fert <- agg_619$fert
-norm_619$soils <- agg_619$soils
-norm_619 <- dummy_cols(norm_619, select_columns = "soils")
+norm_619_nut1 <- as.data.frame(normalize(agg_619_nut1[,c(2:30,39:51)]))
+norm_619_nut1$Id <- agg_619_nut1$Group.1
+norm_619_nut1$treatment <- agg_619_nut1$treatment
+norm_619_nut1$fert <- agg_619_nut1$fert
+#norm_619$soils <- agg_619$soils
+#norm_619 <- dummy_cols(norm_619, select_columns = "soils")
 
-norm_703 <- as.data.frame(normalize(agg_703[,2:40]))
-norm_703$Id <- agg_703$Group.1
-norm_703$treatment <- agg_703$treatment
-norm_703$fert <- agg_703$fert
-norm_703$soils <- agg_703$soils
+norm_703_nut1 <- as.data.frame(normalize(agg_703_nut1[,c(2:30,39:51)]))
+norm_703_nut1$Id <- agg_703_nut1$Group.1
+norm_703_nut1$treatment <- agg_703_nut1$treatment
+norm_703_nut1$fert <- agg_703_nut1$fert
 
-norm_717 <- as.data.frame(normalize(agg_717[,2:40]))
-norm_717$Id <- agg_717$Group.1
-norm_717$treatment <- agg_717$treatment
-norm_717$fert <- agg_717$fert
-norm_717$soils <- agg_717$soils
+norm_703_nut2 <- as.data.frame(normalize(agg_703_nut2[,c(2:30,39:51)]))
+norm_703_nut2$Id <- agg_703_nut2$Group.1
+norm_703_nut2$treatment <- agg_703_nut2$treatment
+norm_703_nut2$fert <- agg_703_nut2$fert
+
+norm_717_nut1 <- as.data.frame(normalize(agg_717_nut1[,c(2:30,39:51)]))
+norm_717_nut1$Id <- agg_717_nut1$Group.1
+norm_717_nut1$treatment <- agg_717_nut1$treatment
+norm_717_nut1$fert <- agg_717_nut1$fert
+
+norm_717_nut2 <- as.data.frame(normalize(agg_717_nut2[,c(2:30,39:51)]))
+norm_717_nut2$Id <- agg_717_nut2$Group.1
+norm_717_nut2$treatment <- agg_717_nut2$treatment
+norm_717_nut2$fert <- agg_717_nut2$fert
+
+norm_717_nut3 <- as.data.frame(normalize(agg_717_nut3[,c(2:30,39:51)]))
+norm_717_nut3$Id <- agg_717_nut3$Group.1
+norm_717_nut3$treatment <- agg_717_nut3$treatment
+norm_717_nut3$fert <- agg_717_nut3$fert
 
 #z score normalization of data
-z_619 <- as.data.frame(scale(agg_619[,2:40]))
-z_619$Id <- agg_619$Group.1
-z_619$treatment <- agg_619$treatment
-z_619$fert <- agg_619$fert
-z_619$soils <- agg_619$soils
-z_619 <- dummy_cols(z_619, select_columns = "soils")
+z_619_nut1 <- as.data.frame(scale(agg_619_nut1[,c(2:30,39:51)]))
+z_619_nut1$Id <- agg_619_nut1$Group.1
+z_619_nut1$treatment <- agg_619_nut1$treatment
+z_619_nut1$fert <- agg_619_nut1$fert
+#z_619$soils <- agg_619$soils
+#z_619 <- dummy_cols(z_619, select_columns = "soils")
 
-z_703 <- as.data.frame(scale(agg_703[,2:40]))
-z_703$Id <- agg_703$Group.1
-z_703$treatment <- agg_703$treatment
-z_703$fert <- agg_703$fert
-z_703$soils <- agg_703$soils
+z_703_nut1 <- as.data.frame(scale(agg_703_nut1[,c(2:30,39:51)]))
+z_703_nut1$Id <- agg_703_nut1$Group.1
+z_703_nut1$treatment <- agg_703_nut1$treatment
+z_703_nut1$fert <- agg_703_nut1$fert
 
-z_717 <- as.data.frame(scale(agg_717[,2:40]))
-z_717$Id <- agg_717$Group.1
-z_717$treatment <- agg_717$treatment
-z_717$fert <- agg_717$fert
-z_717$soils <- agg_717$soils
+z_703_nut2 <- as.data.frame(scale(agg_703_nut2[,c(2:30,39:51)]))
+z_703_nut2$Id <- agg_703_nut2$Group.1
+z_703_nut2$treatment <- agg_703_nut2$treatment
+z_703_nut2$fert <- agg_703_nut2$fert
+
+z_717_nut1 <- as.data.frame(scale(agg_717_nut1[,c(2:30,39:51)]))
+z_717_nut1$Id <- agg_717_nut1$Group.1
+z_717_nut1$treatment <- agg_717_nut1$treatment
+z_717_nut1$fert <- agg_717_nut1$fert
+
+z_717_nut2 <- as.data.frame(scale(agg_717_nut2[,c(2:30,39:51)]))
+z_717_nut2$Id <- agg_717_nut2$Group.1
+z_717_nut2$treatment <- agg_717_nut2$treatment
+z_717_nut2$fert <- agg_717_nut2$fert
+
+z_717_nut3 <- as.data.frame(scale(agg_717_nut3[,c(2:30,39:51)]))
+z_717_nut3$Id <- agg_717_nut3$Group.1
+z_717_nut3$treatment <- agg_717_nut3$treatment
+z_717_nut3$fert <- agg_717_nut3$fert
+
 
 #---------------------------------------- LM structural only (partial mask) ------------------------------------------
 lmp <- function (modelobject) {
@@ -655,7 +690,8 @@ xkeep_spec_717 <- xkeep_all_717[1:2]
 yvar <- c("N","P","K","Mg","Ca","S","Zn", "Mn", "Cu", "B")
 
 
-tmp <- lm(N ~ mean+kurt+rumple+crrmedian+crriqr+moran+watersum, data=z_619)
+tmp <- lm(Mg ~ 0+crrmedian+kurt+moran, data=z_619)
+summary(tmp)
 vif(tmp)
 
 
@@ -680,63 +716,109 @@ topmod_res <- function(y, xkeep, data){
   topmod
 }
 
-xvars_all_fixed <- c("mean","kurt","rumple","crrmedian","crriqr","moran","watersum","tgi_mean","tgi_sd")
+xvars_all_fixed <- c("mean","kurt","rumple","crrmedian", "crriqr","moran","watersum","tgi_mean","tgi_sd")
 xvars_spec_fixed <- xvars_all_fixed[8:9]
 xvars_struc_fixed <- xvars_all_fixed[1:7]
 
 # ---------------------------------- Structural LMs ----------------------------------------------
-struc_619 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_619)
-struc_619 <- do.call(rbind, lapply(struc_619, data.frame))
-struc_mods_619 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_619)
+struc_619_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_619_nut1)
+struc_619_nut1 <- do.call(rbind, lapply(struc_619_nut1, data.frame))
+struc_mods_619_nut1 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_619_nut1)
 
-struc_703 <- lapply(yvar, lm_compare, xkeep=xvars_struc_fixed, data=z_703)
-struc_703 <- do.call(rbind, lapply(struc_703, data.frame))
-struc_mods_703 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_703)
+struc_703_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_703_nut1)
+struc_703_nut1 <- do.call(rbind, lapply(struc_703_nut1, data.frame))
+struc_mods_703_nut1 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_703_nut1)
 
-struc_717 <- lapply(yvar, lm_compare, xkeep=xvars_struc_fixed, data=z_717)
-struc_717 <- do.call(rbind, lapply(struc_717, data.frame))
-struc_mods_717 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_717)
+struc_703_nut2 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_703_nut2)
+struc_703_nut2 <- do.call(rbind, lapply(struc_703_nut2, data.frame))
+struc_mods_703_nut2 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_703_nut2)
+
+struc_717_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_717_nut1)
+struc_717_nut1 <- do.call(rbind, lapply(struc_717_nut1, data.frame))
+struc_mods_717_nut1 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_717_nut1)
+
+struc_717_nut2 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_717_nut2)
+struc_717_nut2 <- do.call(rbind, lapply(struc_717_nut2, data.frame))
+struc_mods_717_nut2 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_717_nut2)
+
+struc_717_nut3 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_717_nut3)
+struc_717_nut3 <- do.call(rbind, lapply(struc_717_nut3, data.frame))
+struc_mods_717_nut3 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_717_nut3)
 
 # ---------------------------------- Spectral lm_compares ----------------------------------------------
 
-spec_619 <- lapply(yvar, lm_compare, xvars_spec_fixed, z_619)
-spec_619 <- do.call(rbind, lapply(spec_619, data.frame))
-spec_mods_619 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_619)
+spec_619_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_spec_fixed, data=z_619_nut1)
+spec_619_nut1 <- do.call(rbind, lapply(spec_619_nut1, data.frame))
+spec_mods_619_nut1 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_619_nut1)
 
-spec_703 <- lapply(yvar, lm_compare, xvars_spec_fixed, z_703)
-spec_703 <- do.call(rbind, lapply(spec_703, data.frame))
-spec_mods_703 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_703)
+spec_703_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_spec_fixed, data=z_703_nut1)
+spec_703_nut1 <- do.call(rbind, lapply(spec_703_nut1, data.frame))
+spec_mods_703_nut1 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_703_nut1)
 
-spec_717 <- lapply(yvar, lm_compare, xvars_spec_fixed, z_717)
-spec_717 <- do.call(rbind, lapply(spec_717, data.frame))
-spec_mods_717 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_717)
+spec_703_nut2 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_spec_fixed, data=z_703_nut2)
+spec_703_nut2 <- do.call(rbind, lapply(spec_703_nut2, data.frame))
+spec_mods_703_nut2 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_703_nut2)
+
+spec_717_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_spec_fixed, data=z_717_nut1)
+spec_717_nut1 <- do.call(rbind, lapply(spec_717_nut1, data.frame))
+spec_mods_717_nut1 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_717_nut1)
+
+spec_717_nut2 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_spec_fixed, data=z_717_nut2)
+spec_717_nut2 <- do.call(rbind, lapply(spec_717_nut2, data.frame))
+spec_mods_717_nut2 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_717_nut2)
+
+spec_717_nut3 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_spec_fixed, data=z_717_nut3)
+spec_717_nut3 <- do.call(rbind, lapply(spec_717_nut3, data.frame))
+spec_mods_717_nut3 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_717_nut3)
 
 # ---------------------------------- Structural and Spectral lm_compares ----------------------------------------------
 
-spec_struc_619 <- lapply(yvar, lm_compare, xvars_all_fixed, z_619)
-spec_struc_619 <- do.call(rbind, lapply(spec_struc_619, data.frame))
-spec_struc_mods_619 <- lapply(yvar, topmod_res, xvars_all_fixed, z_619)
+spec_struc_619_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_all_fixed, data=z_619_nut1)
+spec_struc_619_nut1 <- do.call(rbind, lapply(spec_struc_619_nut1, data.frame))
+spec_struc_mods_619_nut1 <- lapply(yvar, topmod_res, xvars_all_fixed, z_619_nut1)
 
-spec_struc_703 <- lapply(yvar, lm_compare, xvars_all_fixed, z_703)
-spec_struc_703 <- do.call(rbind, lapply(spec_struc_703, data.frame))
-spec_struc_mods_703 <- lapply(yvar, topmod_res, xvars_all_fixed, z_703)
+spec_struc_703_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_all_fixed, data=z_703_nut1)
+spec_struc_703_nut1 <- do.call(rbind, lapply(spec_struc_703_nut1, data.frame))
+spec_struc_mods_703_nut1 <- lapply(yvar, topmod_res, xvars_all_fixed, z_703_nut1)
 
-spec_struc_717 <- lapply(yvar, lm_compare, xvars_all_fixed, z_717)
-spec_struc_717 <- do.call(rbind, lapply(spec_struc_717, data.frame))
-spec_struc_mods_717 <- lapply(yvar, topmod_res, xvars_all_fixed, z_717)
+spec_struc_703_nut2 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_all_fixed, data=z_703_nut2)
+spec_struc_703_nut2 <- do.call(rbind, lapply(spec_struc_703_nut2, data.frame))
+spec_struc_mods_703_nut2 <- lapply(yvar, topmod_res, xvars_all_fixed, z_703_nut2)
+
+spec_struc_717_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_all_fixed, data=z_717_nut1)
+spec_struc_717_nut1 <- do.call(rbind, lapply(spec_struc_717_nut1, data.frame))
+spec_struc_mods_717_nut1 <- lapply(yvar, topmod_res, xvars_all_fixed, z_717_nut1)
+
+spec_struc_717_nut2 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_all_fixed, data=z_717_nut2)
+spec_struc_717_nut2 <- do.call(rbind, lapply(spec_struc_717_nut2, data.frame))
+spec_struc_mods_717_nut2 <- lapply(yvar, topmod_res, xvars_all_fixed, z_717_nut2)
+
+spec_struc_717_nut3 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_all_fixed, data=z_717_nut3)
+spec_struc_717_nut3 <- do.call(rbind, lapply(spec_struc_717_nut3, data.frame))
+spec_struc_mods_717_nut3 <- lapply(yvar, topmod_res, xvars_all_fixed, z_717_nut3)
+
 
 # ------------------------------------------- Write results -----------------------------------------------
-write.csv(struc_619, "results/struc_619.csv")
-write.csv(struc_703, "results/struc_703.csv")
-write.csv(struc_717, "results/struc_717.csv")
+write.csv(struc_619_nut1, "results/struc_619_nut1.csv")
+write.csv(struc_703_nut1, "results/struc_703_nut1.csv")
+write.csv(struc_703_nut2, "results/struc_703_nut2.csv")
+write.csv(struc_717_nut1, "results/struc_717_nut1.csv")
+write.csv(struc_717_nut2, "results/struc_717_nut2.csv")
+write.csv(struc_717_nut3, "results/struc_717_nut3.csv")
 
-write.csv(spec_619, "results/spec_619.csv")
-write.csv(spec_703, "results/spec_703.csv")
-write.csv(spec_717, "results/spec_717.csv")
+write.csv(spec_619_nut1, "results/spec_619_nut1.csv")
+write.csv(spec_703_nut1, "results/spec_703_nut1.csv")
+write.csv(spec_703_nut2, "results/spec_703_nut2.csv")
+write.csv(spec_717_nut1, "results/spec_717_nut1.csv")
+write.csv(spec_717_nut2, "results/spec_717_nut2.csv")
+write.csv(spec_717_nut3, "results/spec_717_nut3.csv")
 
-write.csv(spec_struc_619, "results/spec_struc_619.csv")
-write.csv(spec_struc_703, "results/spec_struc_703.csv")
-write.csv(spec_struc_717, "results/spec_struc_717.csv")
+write.csv(spec_struc_619_nut1, "results/spec_struc_619_nut1.csv")
+write.csv(spec_struc_703_nut1, "results/spec_struc_703_nut1.csv")
+write.csv(spec_struc_703_nut2, "results/spec_struc_703_nut2.csv")
+write.csv(spec_struc_717_nut1, "results/spec_struc_717_nut1.csv")
+write.csv(spec_struc_717_nut2, "results/spec_struc_717_nut2.csv")
+write.csv(spec_struc_717_nut3, "results/spec_struc_717_nut3.csv")
 
 get_coef <- function(mod){
   df <- as.data.frame(coef(summary(mod)))
@@ -744,49 +826,104 @@ get_coef <- function(mod){
   df
 }
 
-struc_619_all <- lapply(struc_mods_619, get_coef)
-write.csv(bind_rows(struc_619_all, .id = "column_label"), "results/struc_619_coefs.csv")
-
-spec_619_all <- lapply(spec_mods_619, get_coef)
-write.csv(bind_rows(spec_619_all, .id = "column_label"), "results/spec_619_coefs.csv")
-
-spec_struc_619_all <- lapply(spec_struc_mods_619, get_coef)
-write.csv(bind_rows(spec_struc_619_all, .id = "column_label"), "results/spec_struc_619_coefs.csv")
 
 
-struc_703_all <- lapply(struc_mods_703, get_coef)
-write.csv(bind_rows(struc_703_all, .id = "column_label"), "results/struc_703_coefs.csv")
+struc_619_all_nut1 <- lapply(struc_mods_619_nut1, get_coef)
+struc_619_all_nut1 = bind_rows(struc_619_all_nut1, .id = "column_label")
+write.csv(struc_619_all_nut1, "results/spec_struc_619_coefs_nut1.csv")
 
-spec_703_all <- lapply(spec_mods_703, get_coef)
-write.csv(bind_rows(spec_703_all, .id = "column_label"), "results/spec_703_coefs.csv")
+spec_619_all_nut1 <- lapply(spec_mods_619_nut1, get_coef)
+spec_619_all_nut1 = bind_rows(spec_619_all_nut1, .id = "column_label")
+write.csv(spec_619_all_nut1, "results/spec_struc_619_coefs_nut1.csv")
 
-spec_struc_703_all <- lapply(spec_struc_mods_703, get_coef)
-write.csv(bind_rows(spec_struc_703_all, .id = "column_label"), "results/spec_struc_703_coefs.csv")
+spec_struc_619_all_nut1 <- lapply(spec_struc_mods_619_nut1, get_coef)
+spec_struc_619_all_nut1 = bind_rows(spec_struc_619_all_nut1, .id = "column_label")
+write.csv(spec_struc_619_all_nut1, "results/spec_struc_619_coefs_nut1.csv")
 
 
-struc_717_all <- lapply(struc_mods_717, get_coef)
-write.csv(bind_rows(struc_717_all, .id = "column_label"), "results/struc_717_coefs.csv")
 
-spec_717_all <- lapply(spec_mods_717, get_coef)
-write.csv(bind_rows(spec_717_all, .id = "column_label"), "results/spec_717_coefs.csv")
+struc_703_all_nut1 <- lapply(struc_mods_703_nut1, get_coef)
+struc_703_all_nut1 = bind_rows(struc_703_all_nut1, .id = "column_label")
+write.csv(struc_703_all_nut1, "results/spec_struc_703_coefs_nut1.csv")
 
-spec_struc_717_all <- lapply(spec_struc_mods_717, get_coef)
-write.csv(bind_rows(spec_struc_717_all, .id = "column_label"), "results/spec_struc_717_coefs.csv")
+spec_703_all_nut1 <- lapply(spec_mods_703_nut1, get_coef)
+spec_703_all_nut1 = bind_rows(spec_703_all_nut1, .id = "column_label")
+write.csv(spec_703_all_nut1, "results/spec_struc_703_coefs_nut1.csv")
+
+spec_struc_703_all_nut1 <- lapply(spec_struc_mods_703_nut1, get_coef)
+spec_struc_703_all_nut1 = bind_rows(spec_struc_703_all_nut1, .id = "column_label")
+write.csv(spec_struc_703_all_nut1, "results/spec_struc_703_coefs_nut1.csv")
+
+
+
+struc_703_all_nut2 <- lapply(struc_mods_703_nut2, get_coef)
+struc_703_all_nut2 = bind_rows(struc_703_all_nut2, .id = "column_label")
+write.csv(struc_703_all_nut2, "results/spec_struc_703_coefs_nut2.csv")
+
+spec_703_all_nut2 <- lapply(spec_mods_703_nut2, get_coef)
+spec_703_all_nut2 = bind_rows(spec_703_all_nut2, .id = "column_label")
+write.csv(spec_703_all_nut2, "results/spec_struc_703_coefs_nut2.csv")
+
+spec_struc_703_all_nut2 <- lapply(spec_struc_mods_703_nut2, get_coef)
+spec_struc_703_all_nut2 = bind_rows(spec_struc_703_all_nut2, .id = "column_label")
+write.csv(spec_struc_703_all_nut2, "results/spec_struc_703_coefs_nut2.csv")
+
+
+
+struc_717_all_nut1 <- lapply(struc_mods_717_nut1, get_coef)
+struc_717_all_nut1 = bind_rows(struc_717_all_nut1, .id = "column_label")
+write.csv(struc_717_all_nut1, "results/spec_struc_717_coefs_nut1.csv")
+
+spec_717_all_nut1 <- lapply(spec_mods_717_nut1, get_coef)
+spec_717_all_nut1 = bind_rows(spec_717_all_nut1, .id = "column_label")
+write.csv(spec_717_all_nut1, "results/spec_struc_717_coefs_nut1.csv")
+
+spec_struc_717_all_nut1 <- lapply(spec_struc_mods_717_nut1, get_coef)
+spec_struc_717_all_nut1 = bind_rows(spec_struc_717_all_nut1, .id = "column_label")
+write.csv(spec_struc_717_all_nut1, "results/spec_struc_717_coefs_nut1.csv")
+
+
+
+struc_717_all_nut2 <- lapply(struc_mods_717_nut2, get_coef)
+struc_717_all_nut2 = bind_rows(struc_717_all_nut2, .id = "column_label")
+write.csv(struc_717_all_nut2, "results/spec_struc_717_coefs_nut2.csv")
+
+spec_717_all_nut2 <- lapply(spec_mods_717_nut2, get_coef)
+spec_717_all_nut2 = bind_rows(spec_717_all_nut2, .id = "column_label")
+write.csv(spec_717_all_nut2, "results/spec_struc_717_coefs_nut2.csv")
+
+spec_struc_717_all_nut2 <- lapply(spec_struc_mods_717_nut2, get_coef)
+spec_struc_717_all_nut2 = bind_rows(spec_struc_717_all_nut2, .id = "column_label")
+write.csv(spec_struc_717_all_nut2, "results/spec_struc_717_coefs_nut2.csv")
+
+
+
+struc_717_all_nut3 <- lapply(struc_mods_717_nut3, get_coef)
+struc_717_all_nut3 = bind_rows(struc_717_all_nut3, .id = "column_label")
+write.csv(struc_717_all_nut3, "results/spec_struc_717_coefs_nut3.csv")
+
+spec_717_all_nut3 <- lapply(spec_mods_717_nut3, get_coef)
+spec_717_all_nut3 = bind_rows(spec_717_all_nut3, .id = "column_label")
+write.csv(spec_717_all_nut3, "results/spec_struc_717_coefs_nut3.csv")
+
+spec_struc_717_all_nut3 <- lapply(spec_struc_mods_717_nut3, get_coef)
+spec_struc_717_all_nut3 = bind_rows(spec_struc_717_all_nut3, .id = "column_label")
+write.csv(spec_struc_717_all_nut3, "results/spec_struc_717_coefs_nut3.csv")
+
 
 
 #-------------------------------------------- by date plots --------------------------------------------------
-library(ggplot2)
-
 #619
 
 struc_619$type <- "structural"
 spec_619$type <- "spectral"
 spec_struc_619$type <- "spectral+structural"
-all_619 <- rbind(struc_619[c(1:6,10),13:15], spec_619[c(1:6,10),8:10], spec_struc_619[c(1:6,10),15:17])
+all_619 <- rbind(struc_619[c(1:3,10),13:15], spec_619[c(1:3,10),8:10], spec_struc_619[c(1:3,10),15:17])
 
 
-all_619$yvar <- factor(all_619$yvar,levels = c("N","P","K","Mg","Ca","S","Zn", "Mn", "Cu", "B"))
+all_619$yvar <- factor(all_619$yvar,levels = c("N","P","K","B"))
 all_619$type <- factor(all_619$type, levels = c("structural", "spectral", "spectral+structural"))
+all_619$date <- "June 19" 
 
 ggplot(data=all_619, aes(x=yvar, y=adj_r2, fill=type)) +
   geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
@@ -797,10 +934,11 @@ ggplot(data=all_619, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_703$type <- "structural"
 spec_703$type <- "spectral"
 spec_struc_703$type <- "spectral+structural"
-all_703 <- rbind(struc_703[c(1:6,10),13:15], spec_703[c(1:6,10),8:10], spec_struc_703[c(1:6,10),15:17])
+all_703 <- rbind(struc_703[c(1:3,10),13:15], spec_703[c(1:3,10),8:10], spec_struc_703[c(1:3,10),15:17])
 
-all_703$yvar <- factor(all_703$yvar,levels = c("N","P","K","Mg","Ca","S","Zn", "Mn", "Cu", "B"))
+all_703$yvar <- factor(all_703$yvar,levels = c("N","P","K","B"))
 all_703$type <- factor(all_703$type, levels = c("structural", "spectral", "spectral+structural"))
+all_703$date <- "July 3"
 
 ggplot(data=all_703, aes(x=yvar, y=adj_r2, fill=type)) +
   geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
@@ -810,15 +948,26 @@ ggplot(data=all_703, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_717$type <- "structural"
 spec_717$type <- "spectral"
 spec_struc_717$type <- "spectral+structural"
-all_717 <- rbind(struc_717[c(1:6,10),13:15], spec_717[c(1:6,10),8:10], spec_struc_717[c(1:6,10),15:17])
+all_717 <- rbind(struc_717[c(1:3,10),13:15], spec_717[c(1:3,10),8:10], spec_struc_717[c(1:3,10),15:17])
 
-all_717$yvar <- factor(all_717$yvar,levels = c("N","P","K","Mg","Ca","S","Zn", "Mn", "Cu", "B"))
+all_717$yvar <- factor(all_717$yvar,levels = c("N","P","K","B"))
 all_717$type <- factor(all_717$type, levels = c("structural", "spectral", "spectral+structural"))
+all_717$date <- "July 17"
 
 ggplot(data=all_717, aes(x=yvar, y=adj_r2, fill=type)) +
   geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8))+
   xlab('nutrient') + labs(y=expression(paste("adjusted r"^"2"))) + ylim(0,0.85) + ggtitle("July 17")
 
+
+# All dates
+all_dates <- rbind(all_619, all_703, all_717)
+all_dates$date <- factor(all_dates$date, levels = c("June 19", "July 3", "July 17"))
+
+ggplot(data=all_dates, aes(x=yvar, y=adj_r2, fill=type)) +
+  geom_bar(stat="identity", width=0.6, position=position_dodge(width=0.8))+
+  xlab('response variable') + labs(y=expression(paste("adjusted R "^"2"))) + ylim(0,0.81) + facet_wrap(~date) +
+  theme(strip.text.x = element_text(size = 10, face = "bold")) + theme_hc() + 
+  scale_fill_discrete(name = "", labels = c("stuctural metrics", "spectral metrics", "spectral + structural metrics"))
 
 
 #-------------------------------------------- by nutrient plots --------------------------------------------------
@@ -943,9 +1092,7 @@ ggplot(data=B_all, aes(x=Date, y=adj_r2, fill=type)) +
 
 # -----------------------------tables-----------------------------
 
-library(stargazer)
-
-# Regression model tables
+# Regression model tables for 619 nutrients ONLY
 
 n_struc_mods <- list(struc_mods_619[[1]], struc_mods_703[[1]], struc_mods_717[[1]])
 stargazer(n_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
@@ -964,7 +1111,7 @@ stargazer(n_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single
 
 p_struc_mods <- list(struc_mods_619[[2]], struc_mods_703[[2]], struc_mods_717[[2]])
 stargazer(p_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "Rumple index"))
+          covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "canopy relief ratio median"))
 
 p_spec_mods <- list(spec_mods_619[[2]], spec_mods_703[[2]], spec_mods_717[[2]])
 stargazer(p_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
@@ -988,48 +1135,6 @@ stargazer(k_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single
           covariate.labels = c("TGI mean", "canopy relief ratio median",
                                "canopy relief ratio IQR","Moran's I", "water accumulation (m)", "TGI standard deviation"))
 
-
-mg_struc_mods <- list(struc_mods_619[[4]], struc_mods_703[[4]], struc_mods_717[[4]])
-stargazer(mg_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "Rumple index", "canopy relief ratio median", 
-                               "Moran's I"))
-
-mg_spec_mods <- list(spec_mods_619[[4]], spec_mods_703[[4]], spec_mods_717[[4]])
-stargazer(mg_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("TGI mean", "TGI standard deviation"))
-
-mg_spec_struc_mods <- list(spec_struc_mods_619[[4]], spec_struc_mods_703[[4]], spec_struc_mods_717[[4]])
-stargazer(mg_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height mean (m)", "TGI mean", "crop height histogram kurtosis", "Rumple index","canopy relief ratio median",
-                               "canopy relief ratio IQR","Moran's I", "TGI standard deviation"))
-
-
-ca_struc_mods <- list(struc_mods_619[[5]], struc_mods_717[[5]])
-stargazer(ca_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height histogram kurtosis","canopy relief ratio IQR","Moran's I"))
-
-ca_spec_mods <- list(spec_mods_717[[5]])
-stargazer(ca_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("TGI mean"))
-
-ca_spec_struc_mods <- list(spec_struc_mods_619[[5]], spec_struc_mods_717[[5]])
-stargazer(ca_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c( "crop height histogram kurtosis","canopy relief ratio IQR","Moran's I"))
-
-
-s_struc_mods <- list(struc_mods_619[[6]], struc_mods_703[[6]], struc_mods_717[[6]])
-stargazer(s_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height mean (m)","Rumple index","canopy relief ratio median"))
-
-s_spec_mods <- list(spec_mods_619[[6]], spec_mods_703[[6]], spec_mods_717[[6]])
-stargazer(s_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("TGI mean", "TGI standard deviation"))
-
-s_spec_struc_mods <- list(spec_struc_mods_619[[6]], spec_struc_mods_703[[6]], spec_struc_mods_717[[6]])
-stargazer(s_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height mean (m)", "TGI mean", "Rumple index","canopy relief ratio median", "TGI standard deviation"))
-
-
 b_struc_mods <- list(struc_mods_619[[10]], struc_mods_703[[10]], struc_mods_717[[10]])
 stargazer(b_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
           covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "Rumple index", "canopy relief ratio median",
@@ -1044,6 +1149,239 @@ stargazer(b_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single
           covariate.labels = c("crop height mean (m)", "TGI mean", "crop height histogram kurtosis", "Rumple index","canopy relief ratio median",
                                "canopy relief ratio IQR","Moran's I"))
 
+
+
+# Regression model tables USING NUTRIENTS BY DATE
+
+n_struc_mods <- list(struc_mods_619[[1]], struc_mods_703[[1]], struc_mods_717[[1]])
+stargazer(n_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "Rumple index", "canopy relief ratio median", 
+                               "canopy relief ratio IQR", "Moran's I", "water accumulation (m)"))
+
+n_spec_mods <- list(spec_mods_619[[1]], spec_mods_703[[1]], spec_mods_717[[1]])
+stargazer(n_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("TGI mean", "TGI standard deviation"))
+
+n_spec_struc_mods <- list(spec_struc_mods_619[[1]], spec_struc_mods_703[[1]], spec_struc_mods_717[[1]])
+stargazer(n_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("TGI mean", "Rumple index", "canopy relief ratio median", 
+                               "Moran's I", "water accumulation (m)", "TGI standard deviation"))
+
+
+p_struc_mods <- list(struc_mods_619[[2]], struc_mods_703[[2]], struc_mods_717[[2]])
+stargazer(p_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "canopy relief ratio median"))
+
+p_spec_mods <- list(spec_mods_619[[2]], spec_mods_703[[2]], spec_mods_717[[2]])
+stargazer(p_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("TGI mean", "TGI standard deviation"))
+
+p_spec_struc_mods <- list(spec_struc_mods_619[[2]], spec_struc_mods_703[[2]], spec_struc_mods_717[[2]])
+stargazer(p_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("crop height mean (m)", "canopy relief ratio median",
+                               "canopy relief ratio IQR", "water accumulation (m)", "TGI standard deviation"))
+
+k_struc_mods <- list(struc_mods_619[[3]], struc_mods_703[[3]], struc_mods_717[[3]])
+stargazer(k_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("Rumple index", "canopy relief ratio median", "canopy relief ratio IQR", "Moran's I"))
+
+k_spec_mods <- list(spec_mods_619[[3]], spec_mods_703[[3]], spec_mods_717[[3]])
+stargazer(k_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("TGI mean", "TGI standard deviation"))
+
+k_spec_struc_mods <- list(spec_struc_mods_619[[3]], spec_struc_mods_703[[3]], spec_struc_mods_717[[3]])
+stargazer(k_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("TGI mean", "canopy relief ratio median",
+                               "canopy relief ratio IQR","Moran's I", "water accumulation (m)", "TGI standard deviation"))
+
+b_struc_mods <- list(struc_mods_619[[10]], struc_mods_703[[10]], struc_mods_717[[10]])
+stargazer(b_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("crop height mean (m)", "Rumple index", "canopy relief ratio median"))
+
+b_spec_mods <- list(spec_mods_619[[10]], spec_mods_703[[10]], spec_mods_717[[10]])
+stargazer(b_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T)
+
+b_spec_struc_mods <- list(spec_struc_mods_619[[10]], spec_struc_mods_703[[10]], spec_struc_mods_717[[10]])
+stargazer(b_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+          covariate.labels = c("TGI mean", "crop height mean (m)", "Rumple index","canopy relief ratio median",
+                               "Moran's I",  "water accumulation (m)"))
+
+
 # Nutrient summary tables
 
-stargazer(plots_619@data[,c(23:28, 33)])
+stargazer(agg_619[,c(2:4, 12)])
+stargazer(agg_703[,c(2:4, 12)])
+stargazer(agg_717[,c(2:4, 12)])
+
+# Metric summary tables
+
+stargazer(plots_619@data[,xvars_all_fixed])
+stargazer(plots_703@data[,xvars_all_fixed])
+stargazer(plots_717@data[,xvars_all_fixed])
+
+stargazer(plots_619@data[,23:67])
+stargazer(plots_703@data[,23:67])
+stargazer(plots_717@data[,23:67])
+
+
+# ------------------------------------ model summary chart -------------------------------------------------------------
+
+# structural
+struc_619_nut1$date <- "June 19"
+struc_703_nut1$date <- "July 3"
+struc_703_nut2$date <- "July 3"
+struc_717_nut1$date <- "July 17"
+struc_717_nut2$date <- "July 17"
+struc_717_nut3$date <- "July 17"
+
+struc_619_nut1$nutrient <- 1
+struc_703_nut1$nutrient <- 1
+struc_703_nut2$nutrient <- 2
+struc_717_nut1$nutrient <- 1
+struc_717_nut2$nutrient <- 2
+struc_717_nut3$nutrient <- 3
+
+struc_619_nut1 <- as.data.table(struc_619_nut1)
+struc_703_nut1 <- as.data.table(struc_703_nut1)
+struc_703_nut2 <- as.data.table(struc_703_nut2)
+struc_717_nut1 <- as.data.table(struc_717_nut1)
+struc_717_nut2 <- as.data.table(struc_717_nut2)
+struc_717_nut3 <- as.data.table(struc_717_nut3)
+
+struc_all <- rbind(struc_619_nut1, struc_703_nut1, struc_703_nut2, struc_717_nut1, struc_717_nut2, struc_717_nut3, fill = T)
+struc_all <- struc_all[struc_all$yvar %in% c("N", "P", "K", "B"),]
+struc_all$model <- paste(struc_all$date, "_", struc_all$nutrient)
+
+struc_N <- struc_all[yvar == "N",][,c(1:7,13:14,17)]
+struc_P <- struc_all[yvar == "P",][,c(1:7,13:14,17)]
+struc_K <- struc_all[yvar == "K",][,c(1:7,13:14,17)]
+struc_B <- struc_all[yvar == "B",][,c(1:7,13:14,17)]
+
+write.csv(struc_N, "results/struc_N.csv")
+write.csv(struc_P, "results/struc_P.csv")
+write.csv(struc_K, "results/struc_K.csv")
+write.csv(struc_B, "results/struc_B.csv")
+
+# mycolor=gradientColor(low="red",mid="white",high="blue",n=20,plot=TRUE)
+# ztable(struc_N[,c(1:7)]) %>% 
+#   makeHeatmap(mycolor = mycolor) %>%
+#   print(caption="Table 5. Heatmap table with 'Blue' palette")
+
+
+# struc_N_heatmap <- data.frame(as.vector(t(struc_N[,c(1:7)])))
+# struc_N_heatmap$model <- c(rep("June 19 _ 1", 7), rep("July 3 _ 1", 7), rep("July 3 _ 2", 7), rep("July 17 _ 1", 7), rep("July 17 _ 2", 7), rep("July 17 _ 3", 7))
+# struc_N_heatmap$model <- factor(struc_N_heatmap$model,levels = rev(c("June 19 _ 1","July 3 _ 1","July 3 _ 2", "July 17 _ 1", "July 17 _ 2", "July 17 _ 3")))
+# struc_N_heatmap$xvar <- names(struc_N)[1:7]
+# struc_N_heatmap$xvar <- factor(struc_N_heatmap$xvar, levels = c("mean", "kurt", "rumple", "crrmedian", "crriqr", "moran", "watersum"))
+# names(struc_N_heatmap)[1] <- "coef"
+# 
+# library(tikzDevice)
+# 
+# tikz(file = "plot_test.tex")
+# library(ggplot2)
+# 
+# plot <- ggplot(struc_N_heatmap, aes(xvar, model)) + # x and y axes => Var1 and Var2
+#   geom_tile(aes(fill = coef)) + # background colours are mapped according to the value column
+#   geom_text(aes(fill = struc_N_heatmap$coef, label = round(struc_N_heatmap$coef, 4))) + # write the values
+#   scale_fill_gradient2(low = muted("darkred"), 
+#                        mid = "white", 
+#                        high = muted("midnightblue"), 
+#                        midpoint = 0)
+# 
+# print(plot)
+# 
+# #Necessary to close or the tikxDevice .tex file will not be written
+# dev.off()
+# 
+# library(condformat)
+# library(formattable)
+# 
+# condformat(struc_N[,c(1:7)]) %>%
+# rule_fill_gradient2(crriqr, midpoint = 0) %>%
+#   rule_fill_gradient2(crrmedian, midpoint = 0)%>%
+#   rule_fill_gradient2(kurt, midpoint = 0)%>%
+#   rule_fill_gradient2(mean, midpoint = 0)%>%
+#   rule_fill_gradient2(moran, midpoint = 0)%>%
+#   rule_fill_gradient2(rumple, midpoint = 0)%>%
+#   rule_fill_gradient2(watersum, midpoint = 0)
+# 
+# condformat(struc_N[,c(1:7)]) %>%
+#   rule_fill_gradient2(xvars_struc_fixed, expression = , midpoint = 0)
+  
+
+
+# spectral
+spec_619_nut1$date <- "June 19"
+spec_703_nut1$date <- "July 3"
+spec_703_nut2$date <- "July 3"
+spec_717_nut1$date <- "July 17"
+spec_717_nut2$date <- "July 17"
+spec_717_nut3$date <- "July 17"
+
+spec_619_nut1$nutrient <- 1
+spec_703_nut1$nutrient <- 1
+spec_703_nut2$nutrient <- 2
+spec_717_nut1$nutrient <- 1
+spec_717_nut2$nutrient <- 2
+spec_717_nut3$nutrient <- 3
+
+spec_619_nut1 <- as.data.table(spec_619_nut1)
+spec_703_nut1 <- as.data.table(spec_703_nut1)
+spec_703_nut2 <- as.data.table(spec_703_nut2)
+spec_717_nut1 <- as.data.table(spec_717_nut1)
+spec_717_nut2 <- as.data.table(spec_717_nut2)
+spec_717_nut3 <- as.data.table(spec_717_nut3)
+
+spec_all <- rbind(spec_619_nut1, spec_703_nut1, spec_703_nut2, spec_717_nut1, spec_717_nut2, spec_717_nut3, fill = T)
+spec_all <- spec_all[spec_all$yvar %in% c("N", "P", "K", "B"),]
+spec_all$model <- paste(spec_all$date, "_", spec_all$nutrient)
+
+spec_N <- spec_all[yvar == "N",][,c(1,2,8,9,12)]
+spec_P <- spec_all[yvar == "P",][,c(1,2,8,9,12)]
+spec_K <- spec_all[yvar == "K",][,c(1,2,8,9,12)]
+spec_B <- spec_all[yvar == "B",][,c(1,2,8,9,12)]
+
+
+write.csv(spec_N, "results/spec_N.csv")
+write.csv(spec_P, "results/spec_P.csv")
+write.csv(spec_K, "results/spec_K.csv")
+write.csv(spec_B, "results/spec_B.csv")
+
+
+# spectral + structural
+
+spec_struc_619_nut1$date <- "June 19"
+spec_struc_703_nut1$date <- "July 3"
+spec_struc_703_nut2$date <- "July 3"
+spec_struc_717_nut1$date <- "July 17"
+spec_struc_717_nut2$date <- "July 17"
+spec_struc_717_nut3$date <- "July 17"
+
+spec_struc_619_nut1$nutrient <- 1
+spec_struc_703_nut1$nutrient <- 1
+spec_struc_703_nut2$nutrient <- 2
+spec_struc_717_nut1$nutrient <- 1
+spec_struc_717_nut2$nutrient <- 2
+spec_struc_717_nut3$nutrient <- 3
+
+spec_struc_619_nut1 <- as.data.table(spec_struc_619_nut1)
+spec_struc_703_nut1 <- as.data.table(spec_struc_703_nut1)
+spec_struc_703_nut2 <- as.data.table(spec_struc_703_nut2)
+spec_struc_717_nut1 <- as.data.table(spec_struc_717_nut1)
+spec_struc_717_nut2 <- as.data.table(spec_struc_717_nut2)
+spec_struc_717_nut3 <- as.data.table(spec_struc_717_nut3)
+
+spec_struc_all <- rbind(spec_struc_619_nut1, spec_struc_703_nut1, spec_struc_703_nut2, spec_struc_717_nut1, spec_struc_717_nut2, spec_struc_717_nut3, fill = T)
+spec_struc_all <- spec_struc_all[spec_struc_all$yvar %in% c("N", "P", "K", "B"),]
+spec_struc_all$model <- paste(spec_struc_all$date, "_", spec_struc_all$nutrient)
+
+spec_struc_N <- spec_struc_all[yvar == "N",][,c(1:9,15,16,19)]
+spec_struc_P <- spec_struc_all[yvar == "P",][,c(1:9,15,16,19)]
+spec_struc_K <- spec_struc_all[yvar == "K",][,c(1:9,15,16,19)]
+spec_struc_B <- spec_struc_all[yvar == "B",][,c(1:9,15,16,19)]
+
+
+write.csv(spec_struc_N, "results/spec_struc_N.csv")
+write.csv(spec_struc_P, "results/spec_struc_P.csv")
+write.csv(spec_struc_K, "results/spec_struc_K.csv")
+write.csv(spec_struc_B, "results/spec_struc_B.csv")
