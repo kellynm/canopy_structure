@@ -21,6 +21,7 @@ library(ggplot2)
 library(extrafont)
 library(grid)
 library(gridExtra)
+library(xtable)
 
 
 # spatial
@@ -443,13 +444,48 @@ names(agg_717_nut2)[2] <- "spad"
 agg_717_nut3 <- merge(agg_717, nutrient[Date==718], by.x="Group.1", by.y='Join_ID')
 names(agg_717_nut3)[2] <- "spad"
 
-# # ------------------------------------Plot variables ------------------------------------------
+# # ------------------------------------ Correlation tests ------------------------------------------
 library(ggpubr)
 # 
 pairs(z_619[,c(20, 21, 26, 29, 31, 32, 34, 35,37, 38)], main="Simple Scatterplot Matrix")
 
 cor(z_619[,c(19:35,37:39)])
-# 
+
+pairs(agg_619_nut1[,c("N","P","K","B")])
+pairs(agg_703_nut2[,c("N","P","K","B")])
+pairs(agg_717_nut3[,c("N","P","K","B")])
+
+cor.test(agg_619_nut1[,c("N")], agg_619_nut1[,c("P")], method = "pearson")
+cor.test(agg_619_nut1[,c("N")], agg_619_nut1[,c("K")], method = "pearson")
+cor.test(agg_619_nut1[,c("N")], agg_619_nut1[,c("B")], method = "pearson")
+cor.test(agg_619_nut1[,c("P")], agg_619_nut1[,c("K")], method = "pearson")
+cor.test(agg_619_nut1[,c("P")], agg_619_nut1[,c("B")], method = "pearson")
+cor.test(agg_619_nut1[,c("K")], agg_619_nut1[,c("B")], method = "pearson")
+
+cor.test(agg_703_nut2[,c("N")], agg_703_nut2[,c("P")], method = "pearson")
+cor.test(agg_703_nut2[,c("N")], agg_703_nut2[,c("K")], method = "pearson")
+cor.test(agg_703_nut2[,c("N")], agg_703_nut2[,c("B")], method = "pearson")
+cor.test(agg_703_nut2[,c("P")], agg_703_nut2[,c("K")], method = "pearson")
+cor.test(agg_703_nut2[,c("P")], agg_703_nut2[,c("B")], method = "pearson")
+cor.test(agg_703_nut2[,c("K")], agg_703_nut2[,c("B")], method = "pearson")
+
+cor.test(agg_717_nut3[,c("N")], agg_717_nut3[,c("P")], method = "pearson")
+cor.test(agg_717_nut3[,c("N")], agg_717_nut3[,c("K")], method = "pearson")
+cor.test(agg_717_nut3[,c("N")], agg_717_nut3[,c("B")], method = "pearson")
+cor.test(agg_717_nut3[,c("P")], agg_717_nut3[,c("K")], method = "pearson")
+cor.test(agg_717_nut3[,c("P")], agg_717_nut3[,c("B")], method = "pearson")
+cor.test(agg_717_nut3[,c("K")], agg_717_nut3[,c("B")], method = "pearson")
+
+correlation.matrix <- cor(agg_619_nut1[,c("N","P","K","B")])
+stargazer(correlation.matrix, title="Correlation Matrix")
+
+correlation.matrix <- cor(agg_703_nut2[,c("N","P","K","B")])
+stargazer(correlation.matrix, title="Correlation Matrix")
+
+correlation.matrix <- cor(agg_717_nut3[,c("N","P","K","B")])
+stargazer(correlation.matrix, title="Correlation Matrix")
+
+
 # #plot(plots_619$mean, plots_619$BuAc)
 # plot(plots_619$N, plots_619$K, xlab = "Median Height (m)", ylab = "Yield (bu/ac)", cex = 1,cex.lab = 2, cex.axis = 2, pch=16)
 # lm_median <- lm(BuAc ~ median, data = plots_1cm)
@@ -728,26 +764,10 @@ xkeep_spec_717 <- xkeep_all_717[1:2]
 
 yvar <- c("N", "P","K", "B")
 
-y <- "N"
-predictors <- paste(c("0", xvars_all_fixed, yvar),collapse='+')
-tmp <- lm(P ~ 0+B+N+crriqr+rumple, data = z_717_nut1)
-summary(tmp)
-control <- yvar[!(yvar %in% y)]
-xvars <- paste(c("0", xvars_struc_fixed, control),collapse='+')
-eq<-as.formula(paste(y, xvars, sep="~"))
-mod1<-lm(eq,data=z_619_nut1, na.action=na.fail)
-summary(mod1)
-modsel <- dredge(mod1)
-topmod <- get.models(modsel, subset = 1)[[1]]
-res <- as.data.frame(modsel[1])
-res$adj_r2 <- summary(topmod)$adj.r.squared
-res$yvar <- y
-res
-
 
 lm_compare <- function(y, xkeep, data){
-  control <- yvar[!(yvar %in% y)]
-  xvars <- paste(c("0", xkeep, control),collapse='+')
+  #control <- yvar[!(yvar %in% y)]
+  xvars <- paste(c("0", xkeep),collapse='+')
   eq<-as.formula(paste(y, xvars, sep="~"))
   mod1<-lm(eq,data=data, na.action=na.fail)
   modsel <- dredge(mod1)
@@ -759,8 +779,8 @@ lm_compare <- function(y, xkeep, data){
 }
 
 topmod_res <- function(y, xkeep, data){
-  control <- yvar[!(yvar %in% y)]
-  xvars <- paste(c("0", xkeep, control),collapse='+')
+  #control <- yvar[!(yvar %in% y)]
+  xvars <- paste(c("0", xkeep),collapse='+')
   eq<-as.formula(paste(y, xvars, sep="~"))
   mod1<-lm(eq,data=data, na.action=na.fail)
   modsel <- dredge(mod1)
@@ -774,155 +794,108 @@ xvars_struc_fixed <- xvars_all_fixed[1:7]
 
 # ---------------------------------- Structural LMs ----------------------------------------------
 struc_619_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_619_nut1)
-struc_619_nut1[[1]]$N <- NA
-struc_619_nut1[[2]]$P <- NA
-struc_619_nut1[[3]]$K <- NA
-struc_619_nut1[[4]]$B <- NA
 struc_619_nut1 <- do.call(rbind, lapply(struc_619_nut1, data.frame))
 struc_mods_619_nut1 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_619_nut1)
 
 struc_703_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_703_nut1)
-struc_703_nut1[[1]]$N <- NA
-struc_703_nut1[[2]]$P <- NA
-struc_703_nut1[[3]]$K <- NA
-struc_703_nut1[[4]]$B <- NA
 struc_703_nut1 <- do.call(rbind, lapply(struc_703_nut1, data.frame))
 struc_mods_703_nut1 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_703_nut1)
 
 struc_703_nut2 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_703_nut2)
-struc_703_nut2[[1]]$N <- NA
-struc_703_nut2[[2]]$P <- NA
-struc_703_nut2[[3]]$K <- NA
-struc_703_nut2[[4]]$B <- NA
 struc_703_nut2 <- do.call(rbind, lapply(struc_703_nut2, data.frame))
 struc_mods_703_nut2 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_703_nut2)
 
 struc_717_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_717_nut1)
-struc_717_nut1[[1]]$N <- NA
-struc_717_nut1[[2]]$P <- NA
-struc_717_nut1[[3]]$K <- NA
-struc_717_nut1[[4]]$B <- NA
 struc_717_nut1 <- do.call(rbind, lapply(struc_717_nut1, data.frame))
 struc_mods_717_nut1 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_717_nut1)
 
 struc_717_nut2 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_717_nut2)
-struc_717_nut2[[1]]$N <- NA
-struc_717_nut2[[2]]$P <- NA
-struc_717_nut2[[3]]$K <- NA
-struc_717_nut2[[4]]$B <- NA
 struc_717_nut2 <- do.call(rbind, lapply(struc_717_nut2, data.frame))
 struc_mods_717_nut2 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_717_nut2)
 
 struc_717_nut3 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_717_nut3)
-struc_717_nut3[[1]]$N <- NA
-struc_717_nut3[[2]]$P <- NA
-struc_717_nut3[[3]]$K <- NA
-struc_717_nut3[[4]]$B <- NA
 struc_717_nut3 <- do.call(rbind, lapply(struc_717_nut3, data.frame))
 struc_mods_717_nut3 <- lapply(yvar, topmod_res, xvars_struc_fixed, z_717_nut3)
 
 # ---------------------------------- Spectral lm_compares ----------------------------------------------
 
 spec_619_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_spec_fixed, data=z_619_nut1)
-spec_619_nut1[[1]]$N <- NA
-spec_619_nut1[[2]]$P <- NA
-spec_619_nut1[[3]]$K <- NA
-spec_619_nut1[[4]]$B <- NA
 spec_619_nut1 <- do.call(rbind, lapply(spec_619_nut1, data.frame))
 spec_mods_619_nut1 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_619_nut1)
 
 spec_703_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_spec_fixed, data=z_703_nut1)
-spec_703_nut1[[1]]$N <- NA
-spec_703_nut1[[2]]$P <- NA
-spec_703_nut1[[3]]$K <- NA
-spec_703_nut1[[4]]$B <- NA
 spec_703_nut1 <- do.call(rbind, lapply(spec_703_nut1, data.frame))
 spec_mods_703_nut1 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_703_nut1)
 
 spec_703_nut2 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_spec_fixed, data=z_703_nut2)
-spec_703_nut2[[1]]$N <- NA
-spec_703_nut2[[2]]$P <- NA
-spec_703_nut2[[3]]$K <- NA
-spec_703_nut2[[4]]$B <- NA
 spec_703_nut2 <- do.call(rbind, lapply(spec_703_nut2, data.frame))
 spec_mods_703_nut2 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_703_nut2)
 
 spec_717_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_spec_fixed, data=z_717_nut1)
-spec_717_nut1[[1]]$N <- NA
-spec_717_nut1[[2]]$P <- NA
-spec_717_nut1[[3]]$K <- NA
-spec_717_nut1[[4]]$B <- NA
 spec_717_nut1 <- do.call(rbind, lapply(spec_717_nut1, data.frame))
 spec_mods_717_nut1 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_717_nut1)
 
 spec_717_nut2 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_spec_fixed, data=z_717_nut2)
-spec_717_nut2[[1]]$N <- NA
-spec_717_nut2[[2]]$P <- NA
-spec_717_nut2[[3]]$K <- NA
-spec_717_nut2[[4]]$B <- NA
 spec_717_nut2 <- do.call(rbind, lapply(spec_717_nut2, data.frame))
 spec_mods_717_nut2 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_717_nut2)
 
 spec_717_nut3 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_spec_fixed, data=z_717_nut3)
-spec_717_nut3[[1]]$N <- NA
-spec_717_nut3[[2]]$P <- NA
-spec_717_nut3[[3]]$K <- NA
-spec_717_nut3[[4]]$B <- NA
 spec_717_nut3 <- do.call(rbind, lapply(spec_717_nut3, data.frame))
 spec_mods_717_nut3 <- lapply(yvar, topmod_res, xvars_spec_fixed, z_717_nut3)
 
 # ---------------------------------- Structural and Spectral lm_compares ----------------------------------------------
 
 spec_struc_619_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_all_fixed, data=z_619_nut1)
-spec_struc_619_nut1[[1]]$N <- NA
-spec_struc_619_nut1[[2]]$P <- NA
-spec_struc_619_nut1[[3]]$K <- NA
-spec_struc_619_nut1[[4]]$B <- NA
 spec_struc_619_nut1 <- do.call(rbind, lapply(spec_struc_619_nut1, data.frame))
 spec_struc_mods_619_nut1 <- lapply(yvar, topmod_res, xvars_all_fixed, z_619_nut1)
 
 spec_struc_703_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_all_fixed, data=z_703_nut1)
-spec_struc_703_nut1[[1]]$N <- NA
-spec_struc_703_nut1[[2]]$P <- NA
-spec_struc_703_nut1[[3]]$K <- NA
-spec_struc_703_nut1[[4]]$B <- NA
 spec_struc_703_nut1 <- do.call(rbind, lapply(spec_struc_703_nut1, data.frame))
 spec_struc_mods_703_nut1 <- lapply(yvar, topmod_res, xvars_all_fixed, z_703_nut1)
 
 spec_struc_703_nut2 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_all_fixed, data=z_703_nut2)
-spec_struc_703_nut2[[1]]$N <- NA
-spec_struc_703_nut2[[2]]$P <- NA
-spec_struc_703_nut2[[3]]$K <- NA
-spec_struc_703_nut2[[4]]$B <- NA
 spec_struc_703_nut2 <- do.call(rbind, lapply(spec_struc_703_nut2, data.frame))
 spec_struc_mods_703_nut2 <- lapply(yvar, topmod_res, xvars_all_fixed, z_703_nut2)
 
 spec_struc_717_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_all_fixed, data=z_717_nut1)
-spec_struc_717_nut1[[1]]$N <- NA
-spec_struc_717_nut1[[2]]$P <- NA
-spec_struc_717_nut1[[3]]$K <- NA
-spec_struc_717_nut1[[4]]$B <- NA
 spec_struc_717_nut1 <- do.call(rbind, lapply(spec_struc_717_nut1, data.frame))
 spec_struc_mods_717_nut1 <- lapply(yvar, topmod_res, xvars_all_fixed, z_717_nut1)
 
 spec_struc_717_nut2 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_all_fixed, data=z_717_nut2)
-spec_struc_717_nut2[[1]]$N <- NA
-spec_struc_717_nut2[[2]]$P <- NA
-spec_struc_717_nut2[[3]]$K <- NA
-spec_struc_717_nut2[[4]]$B <- NA
 spec_struc_717_nut2 <- do.call(rbind, lapply(spec_struc_717_nut2, data.frame))
 spec_struc_mods_717_nut2 <- lapply(yvar, topmod_res, xvars_all_fixed, z_717_nut2)
 
 spec_struc_717_nut3 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_all_fixed, data=z_717_nut3)
-spec_struc_717_nut3[[1]]$N <- NA
-spec_struc_717_nut3[[2]]$P <- NA
-spec_struc_717_nut3[[3]]$K <- NA
-spec_struc_717_nut3[[4]]$B <- NA
 spec_struc_717_nut3 <- do.call(rbind, lapply(spec_struc_717_nut3, data.frame))
 spec_struc_mods_717_nut3 <- lapply(yvar, topmod_res, xvars_all_fixed, z_717_nut3)
 
 
 # ------------------------------------------- Write results -----------------------------------------------
+col.order.struc<- c("mean", "kurt", "rumple", "crrmedian", "crriqr", "moran", "watersum", "df", "logLik", "AICc", "delta", "weight", "adj_r2", "yvar")
+col.order.spec <- c("tgi_mean", "tgi_sd", "df", "logLik", "AICc", "delta", "weight", "adj_r2", "yvar")
+col.order.spec_struc <- c("mean", "kurt", "rumple", "crrmedian", "crriqr", "moran", "watersum", "tgi_mean", "tgi_sd","df", "logLik", "AICc", "delta", "weight", "adj_r2", "yvar")
+
+struc_619_nut1 <- struc_619_nut1[, col.order.struc]
+struc_703_nut1 <- struc_703_nut1[, col.order.struc]
+struc_703_nut2 <- struc_703_nut2[, col.order.struc]
+struc_717_nut1 <- struc_717_nut1[, col.order.struc]
+struc_717_nut2 <- struc_717_nut2[, col.order.struc]
+struc_717_nut3 <- struc_717_nut3[, col.order.struc]
+
+spec_619_nut1 <- spec_619_nut1[, col.order.spec]
+spec_703_nut1 <- spec_703_nut1[, col.order.spec]
+spec_703_nut2 <- spec_703_nut2[, col.order.spec]
+spec_717_nut1 <- spec_717_nut1[, col.order.spec]
+spec_717_nut2 <- spec_717_nut2[, col.order.spec]
+spec_717_nut3 <- spec_717_nut3[, col.order.spec]
+
+spec_struc_619_nut1 <- spec_struc_619_nut1[, col.order.spec_struc]
+spec_struc_703_nut1 <- spec_struc_703_nut1[, col.order.spec_struc]
+spec_struc_703_nut2 <- spec_struc_703_nut2[, col.order.spec_struc]
+spec_struc_717_nut1 <- spec_struc_717_nut1[, col.order.spec_struc]
+spec_struc_717_nut2 <- spec_struc_717_nut2[, col.order.spec_struc]
+spec_struc_717_nut3 <- spec_struc_717_nut3[, col.order.spec_struc]
+
 write.csv(struc_619_nut1, "results/struc_619_nut1.csv")
 write.csv(struc_703_nut1, "results/struc_703_nut1.csv")
 write.csv(struc_703_nut2, "results/struc_703_nut2.csv")
@@ -1007,7 +980,6 @@ spec_struc_717_all_nut1 = bind_rows(spec_struc_717_all_nut1, .id = "column_label
 write.csv(spec_struc_717_all_nut1, "results/spec_struc_717_coefs_nut1.csv")
 
 
-
 struc_717_all_nut2 <- lapply(struc_mods_717_nut2, get_coef)
 struc_717_all_nut2 = bind_rows(struc_717_all_nut2, .id = "column_label")
 write.csv(struc_717_all_nut2, "results/struc_717_coefs_nut2.csv")
@@ -1085,7 +1057,7 @@ spec_struc_717_nut3$nutrient <- 3
 struc_619_nut1$type <- "structural"
 spec_619_nut1$type <- "spectral"
 spec_struc_619_nut1$type <- "spectral+structural"
-all_619_nut1 <- rbind(struc_619_nut1[,17:21], spec_619_nut1[,12:16], spec_struc_619_nut1[,19:23])
+all_619_nut1 <- rbind(struc_619_nut1[,13:17], spec_619_nut1[,8:12], spec_struc_619_nut1[,15:19])
 
 
 all_619_nut1$yvar <- factor(all_619_nut1$yvar,levels = c("N","P","K","B"))
@@ -1094,16 +1066,16 @@ all_619_nut1$type <- factor(all_619_nut1$type, levels = c("structural", "spectra
 g1 <- ggplot(data=all_619_nut1, aes(x=yvar, y=adj_r2, fill=type)) +
   geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8)) + ylim(0,0.85) +theme_hc() + 
   theme(legend.position = "none") +theme(
-  plot.title = element_blank(),
-  axis.title.x = element_blank(),
-  axis.title.y = element_blank(), text = element_text(size=20, family="CM Roman"))
+    plot.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(), text = element_text(size=20, family="CM Roman"))
 
 #703 nut 1
 
 struc_703_nut1$type <- "structural"
 spec_703_nut1$type <- "spectral"
 spec_struc_703_nut1$type <- "spectral+structural"
-all_703_nut1 <- rbind(struc_703_nut1[,17:21], spec_703_nut1[,12:16], spec_struc_703_nut1[,19:23])
+all_703_nut1 <- rbind(struc_703_nut1[,13:17], spec_703_nut1[,8:12], spec_struc_703_nut1[,15:19])
 
 
 all_703_nut1$yvar <- factor(all_703_nut1$yvar,levels = c("N","P","K","B"))
@@ -1122,7 +1094,7 @@ g2 <- ggplot(data=all_703_nut1, aes(x=yvar, y=adj_r2, fill=type)) + labs(y=expre
 struc_703_nut2$type <- "structural"
 spec_703_nut2$type <- "spectral"
 spec_struc_703_nut2$type <- "spectral+structural"
-all_703_nut2 <- rbind(struc_703_nut2[,17:21], spec_703_nut2[,12:16], spec_struc_703_nut2[,19:23])
+all_703_nut2 <- rbind(struc_703_nut2[,13:17], spec_703_nut2[,8:12], spec_struc_703_nut2[,15:19])
 
 
 all_703_nut2$yvar <- factor(all_703_nut2$yvar,levels = c("N","P","K","B"))
@@ -1139,7 +1111,7 @@ g3 <- ggplot(data=all_703_nut2, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_717_nut1$type <- "structural"
 spec_717_nut1$type <- "spectral"
 spec_struc_717_nut1$type <- "spectral+structural"
-all_717_nut1 <- rbind(struc_717_nut1[,17:21], spec_717_nut1[,12:16], spec_struc_717_nut1[,19:23])
+all_717_nut1 <- rbind(struc_717_nut1[,13:17], spec_717_nut1[,8:12], spec_struc_717_nut1[,15:19])
 
 
 all_717_nut1$yvar <- factor(all_717_nut1$yvar,levels = c("N","P","K","B"))
@@ -1157,7 +1129,7 @@ g4 <- ggplot(data=all_717_nut1, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_717_nut2$type <- "structural"
 spec_717_nut2$type <- "spectral"
 spec_struc_717_nut2$type <- "spectral+structural"
-all_717_nut2 <- rbind(struc_717_nut2[,17:21], spec_717_nut2[,12:16], spec_struc_717_nut2[,19:23])
+all_717_nut2 <- rbind(struc_717_nut2[,13:17], spec_717_nut2[,8:12], spec_struc_717_nut2[,15:19])
 
 
 all_717_nut2$yvar <- factor(all_717_nut2$yvar,levels = c("N","P","K","B"))
@@ -1175,7 +1147,7 @@ g5 <- ggplot(data=all_717_nut2, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_717_nut3$type <- "structural"
 spec_717_nut3$type <- "spectral"
 spec_struc_717_nut3$type <- "spectral+structural"
-all_717_nut3 <- rbind(struc_717_nut3[,17:21], spec_717_nut3[,12:16], spec_struc_717_nut3[,19:23])
+all_717_nut3 <- rbind(struc_717_nut3[,13:17], spec_717_nut3[,8:12], spec_struc_717_nut3[,15:19])
 
 
 all_717_nut3$yvar <- factor(all_717_nut3$yvar,levels = c("N","P","K","B"))
@@ -1202,7 +1174,6 @@ ggplot(data=all_dates, aes(x=yvar, y=adj_r2, fill=type)) +
 
 ylab <- expression(paste("adjusted R "^"2"))
 grid.arrange(g1, g2, g3, g4, g5, g6, layout_matrix = rbind(c(1, NA, NA), c(2,3, NA), c(4,5,6)))
-
 
 #-------------------------------------------- by nutrient plots --------------------------------------------------
 # 
@@ -1474,10 +1445,10 @@ struc_all <- rbind(struc_619_nut1, struc_703_nut1, struc_703_nut2, struc_717_nut
 struc_all <- struc_all[struc_all$yvar %in% c("N", "P", "K", "B"),]
 struc_all$model <- paste(struc_all$date, "_", struc_all$nutrient)
 
-struc_N <- struc_all[yvar == "N",][,c(1:11,17:18,22)]
-struc_P <- struc_all[yvar == "P",][,c(1:11,17:18,22)]
-struc_K <- struc_all[yvar == "K",][,c(1:11,17:18,22)]
-struc_B <- struc_all[yvar == "B",][,c(1:11,17:18,22)]
+struc_N <- struc_all[yvar == "N",][,c(1:7,13:14,18)]
+struc_P <- struc_all[yvar == "P",][,c(1:7,13:14,18)]
+struc_K <- struc_all[yvar == "K",][,c(1:7,13:14,18)]
+struc_B <- struc_all[yvar == "B",][,c(1:7,13:14,18)]
 
 write.csv(struc_N, "results/struc_N.csv")
 write.csv(struc_P, "results/struc_P.csv")
@@ -1545,10 +1516,10 @@ spec_all <- rbind(spec_619_nut1, spec_703_nut1, spec_703_nut2, spec_717_nut1, sp
 spec_all <- spec_all[spec_all$yvar %in% c("N", "P", "K", "B"),]
 spec_all$model <- paste(spec_all$date, "_", spec_all$nutrient)
 
-spec_N <- spec_all[yvar == "N",][,c(1:6,12,13,17)]
-spec_P <- spec_all[yvar == "P",][,c(1:6,12,13,17)]
-spec_K <- spec_all[yvar == "K",][,c(1:6,12,13,17)]
-spec_B <- spec_all[yvar == "B",][,c(1:6,12,13,17)]
+spec_N <- spec_all[yvar == "N",][,c(1:2,8,9,13)]
+spec_P <- spec_all[yvar == "P",][,c(1:2,8,9,13)]
+spec_K <- spec_all[yvar == "K",][,c(1:2,8,9,13)]
+spec_B <- spec_all[yvar == "B",][,c(1:2,8,9,13)]
 
 
 write.csv(spec_N, "results/spec_N.csv")
@@ -1570,10 +1541,10 @@ spec_struc_all <- rbind(spec_struc_619_nut1, spec_struc_703_nut1, spec_struc_703
 spec_struc_all <- spec_struc_all[spec_struc_all$yvar %in% c("N", "P", "K", "B"),]
 spec_struc_all$model <- paste(spec_struc_all$date, "_", spec_struc_all$nutrient)
 
-spec_struc_N <- spec_struc_all[yvar == "N",][,c(1:13,19,20,24)]
-spec_struc_P <- spec_struc_all[yvar == "P",][,c(1:13,19,20,24)]
-spec_struc_K <- spec_struc_all[yvar == "K",][,c(1:13,19,20,24)]
-spec_struc_B <- spec_struc_all[yvar == "B",][,c(1:13,19,20,24)]
+spec_struc_N <- spec_struc_all[yvar == "N",][,c(1:9,15,16,20)]
+spec_struc_P <- spec_struc_all[yvar == "P",][,c(1:9,15,16,20)]
+spec_struc_K <- spec_struc_all[yvar == "K",][,c(1:9,15,16,20)]
+spec_struc_B <- spec_struc_all[yvar == "B",][,c(1:9,15,16,20)]
 
 
 write.csv(spec_struc_N, "results/spec_struc_N.csv")
