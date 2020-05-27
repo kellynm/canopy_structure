@@ -62,9 +62,9 @@ csm_masked_619 <- mask(csm_619, nosoil_619)
 csm_masked_703 <- mask(csm_619, nosoil_703)
 csm_masked_717 <- mask(csm_619, nosoil_717)
 
-csm_619_velox <- velox(csm_masked_619)
-csm_703_velox <- velox(csm_masked_703)
-csm_717_velox <- velox(csm_masked_717)
+csm_619_velox <- velox(nosoil_619)
+csm_703_velox <- velox(nosoil_703)
+csm_717_velox <- velox(nosoil_717)
 
 plots <- readOGR("H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/layers/plots", "wilson19_plots", stringsAsFactors = F)
 #plots$fertilizer <- as.factor(plots$fertilizer)
@@ -237,6 +237,14 @@ ch_metrics <- function(x){
 
 ch_df_list <- lapply(extract_list, ch_metrics)
 
+histogram(plot_extract_703$`503_A`, nint=40) # High kurtosis
+histogram(plot_extract_703$`504_G`, nint=40) # Low kurtosis
+
+kurtosis(plot_extract_703$`503_A`, method = "excess")
+kurtosis(plot_extract_703$`504_G`, method = "excess")
+
+plotNormalHistogram(plot_extract_703$`503_A`, breaks = 40)
+plotNormalHistogram(plot_extract_703$`306_D`, breaks = 40)
 #--------------------------------------------------------- rumple index -----------------------------------------------------------------
 library(lidR)
 
