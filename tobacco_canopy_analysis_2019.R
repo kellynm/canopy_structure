@@ -54,17 +54,17 @@ csm_703 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2
 csm_717 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/csm/wilson19_717_csm.tif'), tobacco_area)
 dem <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/lidar/wilson19_dem.tif'), tobacco_area)
 
-nosoil_619 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_619.tif'), tobacco_area)
-nosoil_703 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_703.tif'), tobacco_area)
-nosoil_717 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_717.tif'), tobacco_area)
+# nosoil_619 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_619.tif'), tobacco_area)
+# nosoil_703 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_703.tif'), tobacco_area)
+# nosoil_717 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_717.tif'), tobacco_area)
+# 
+# csm_masked_619 <- mask(csm_619, nosoil_619)
+# csm_masked_703 <- mask(csm_619, nosoil_703)
+# csm_masked_717 <- mask(csm_619, nosoil_717)
 
-csm_masked_619 <- mask(csm_619, nosoil_619)
-csm_masked_703 <- mask(csm_619, nosoil_703)
-csm_masked_717 <- mask(csm_619, nosoil_717)
-
-csm_619_velox <- velox(nosoil_619)
-csm_703_velox <- velox(nosoil_703)
-csm_717_velox <- velox(nosoil_717)
+csm_619_velox <- velox(csm_619)
+csm_703_velox <- velox(csm_703)
+csm_717_velox <- velox(csm_717)
 
 plots <- readOGR("H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/layers/plots", "wilson19_plots", stringsAsFactors = F)
 #plots$fertilizer <- as.factor(plots$fertilizer)
@@ -303,14 +303,14 @@ autocor_619 <- autocor_metrics(csm_619, matrix(c(rep.int(1,60), 0, rep.int(1,60)
 autocor_703 <- autocor_metrics(csm_703, matrix(c(rep.int(1,60), 0, rep.int(1,60)), nc=11, nr=11))
 autocor_717 <- autocor_metrics(csm_717, matrix(c(rep.int(1,60), 0, rep.int(1,60)), nc=11, nr=11))
 
-local_moran_11x11_619 <- MoranLocal(csm_619, matrix(c(rep.int(1,60), 0, rep.int(1,60)), nc=11, nr=11))
-writeRaster(local_moran_11x11_619, "results/local_moran_11x11_619.tif")                  
-
-local_moran_11x11_703 <- MoranLocal(csm_703, matrix(c(rep.int(1,60), 0, rep.int(1,60)), nc=11, nr=11))
-writeRaster(local_moran_11x11_703, "results/local_moran_11x11_703.tif")                  
-
-local_moran_11x11_717 <- MoranLocal(csm_717, matrix(c(rep.int(1,60), 0, rep.int(1,60)), nc=11, nr=11))
-writeRaster(local_moran_11x11_717, "results/local_moran_11x11_717.tif")                  
+# local_moran_11x11_619 <- MoranLocal(csm_619, matrix(c(rep.int(1,60), 0, rep.int(1,60)), nc=11, nr=11))
+# writeRaster(local_moran_11x11_619, "results/local_moran_11x11_619.tif")                  
+# 
+# local_moran_11x11_703 <- MoranLocal(csm_703, matrix(c(rep.int(1,60), 0, rep.int(1,60)), nc=11, nr=11))
+# writeRaster(local_moran_11x11_703, "results/local_moran_11x11_703.tif")                  
+# 
+# local_moran_11x11_717 <- MoranLocal(csm_717, matrix(c(rep.int(1,60), 0, rep.int(1,60)), nc=11, nr=11))
+# writeRaster(local_moran_11x11_717, "results/local_moran_11x11_717.tif")                  
 
 # # Create rasters representing local Moran's I for visualization
 # autocor_rasters <- function(x, w){
@@ -753,13 +753,17 @@ vif_func<-function(in_frame,thresh=10,trace=T,...){
   
 }
 
-xvar_619 <- z_619[,c(19:35,37:39)] # omit PlotCRR and VARI
-xvar_703 <- z_703[,c(19:35,37:39)]
-xvar_717 <- z_717[,c(19:35,37:39)]
+xvar_619 <- z_619_nut1[,c(6:24,26:29)] # omit PlotCRR and VARI
+xvar_703 <- z_703_nut1[,c(6:24,26:29)]
+xvar_717 <- z_717_nut1[,c(6:24,26:29)]
 
 xkeep_all_619 <- vif_func(xvar_619, 4, F)
 xkeep_all_703 <- vif_func(xvar_703, 4, F)
 xkeep_all_717 <- vif_func(xvar_717, 4, F)
+
+xkeep_all_619
+xkeep_all_703
+xkeep_all_717
 
 xkeep_struct_619 <- xkeep_all_619[3:9]
 xkeep_spec_619 <- xkeep_all_619[1:2]
@@ -933,85 +937,63 @@ get_coef <- function(mod){
 
 
 
+
 struc_619_all_nut1 <- lapply(struc_mods_619_nut1, get_coef)
 struc_619_all_nut1 = bind_rows(struc_619_all_nut1, .id = "column_label")
-write.csv(struc_619_all_nut1, "results/struc_619_coefs_nut1.csv")
-
 spec_619_all_nut1 <- lapply(spec_mods_619_nut1, get_coef)
 spec_619_all_nut1 = bind_rows(spec_619_all_nut1, .id = "column_label")
-write.csv(spec_619_all_nut1, "results/spec_619_coefs_nut1.csv")
-
 spec_struc_619_all_nut1 <- lapply(spec_struc_mods_619_nut1, get_coef)
 spec_struc_619_all_nut1 = bind_rows(spec_struc_619_all_nut1, .id = "column_label")
-write.csv(spec_struc_619_all_nut1, "results/spec_struc_619_coefs_nut1.csv")
-
-
-
 struc_703_all_nut1 <- lapply(struc_mods_703_nut1, get_coef)
 struc_703_all_nut1 = bind_rows(struc_703_all_nut1, .id = "column_label")
-write.csv(struc_703_all_nut1, "results/struc_703_coefs_nut1.csv")
-
 spec_703_all_nut1 <- lapply(spec_mods_703_nut1, get_coef)
 spec_703_all_nut1 = bind_rows(spec_703_all_nut1, .id = "column_label")
-write.csv(spec_703_all_nut1, "results/spec_703_coefs_nut1.csv")
-
 spec_struc_703_all_nut1 <- lapply(spec_struc_mods_703_nut1, get_coef)
 spec_struc_703_all_nut1 = bind_rows(spec_struc_703_all_nut1, .id = "column_label")
-write.csv(spec_struc_703_all_nut1, "results/spec_struc_703_coefs_nut1.csv")
-
-
-
 struc_703_all_nut2 <- lapply(struc_mods_703_nut2, get_coef)
 struc_703_all_nut2 = bind_rows(struc_703_all_nut2, .id = "column_label")
-write.csv(struc_703_all_nut2, "results/struc_703_coefs_nut2.csv")
-
 spec_703_all_nut2 <- lapply(spec_mods_703_nut2, get_coef)
 spec_703_all_nut2 = bind_rows(spec_703_all_nut2, .id = "column_label")
-write.csv(spec_703_all_nut2, "results/spec_703_coefs_nut2.csv")
-
 spec_struc_703_all_nut2 <- lapply(spec_struc_mods_703_nut2, get_coef)
 spec_struc_703_all_nut2 = bind_rows(spec_struc_703_all_nut2, .id = "column_label")
-write.csv(spec_struc_703_all_nut2, "results/spec_struc_703_coefs_nut2.csv")
-
-
-
 struc_717_all_nut1 <- lapply(struc_mods_717_nut1, get_coef)
 struc_717_all_nut1 = bind_rows(struc_717_all_nut1, .id = "column_label")
-write.csv(struc_717_all_nut1, "results/struc_717_coefs_nut1.csv")
-
 spec_717_all_nut1 <- lapply(spec_mods_717_nut1, get_coef)
 spec_717_all_nut1 = bind_rows(spec_717_all_nut1, .id = "column_label")
-write.csv(spec_717_all_nut1, "results/spec_717_coefs_nut1.csv")
-
 spec_struc_717_all_nut1 <- lapply(spec_struc_mods_717_nut1, get_coef)
 spec_struc_717_all_nut1 = bind_rows(spec_struc_717_all_nut1, .id = "column_label")
-write.csv(spec_struc_717_all_nut1, "results/spec_struc_717_coefs_nut1.csv")
-
-
 struc_717_all_nut2 <- lapply(struc_mods_717_nut2, get_coef)
 struc_717_all_nut2 = bind_rows(struc_717_all_nut2, .id = "column_label")
-write.csv(struc_717_all_nut2, "results/struc_717_coefs_nut2.csv")
-
 spec_717_all_nut2 <- lapply(spec_mods_717_nut2, get_coef)
 spec_717_all_nut2 = bind_rows(spec_717_all_nut2, .id = "column_label")
-write.csv(spec_717_all_nut2, "results/spec_717_coefs_nut2.csv")
-
 spec_struc_717_all_nut2 <- lapply(spec_struc_mods_717_nut2, get_coef)
 spec_struc_717_all_nut2 = bind_rows(spec_struc_717_all_nut2, .id = "column_label")
-write.csv(spec_struc_717_all_nut2, "results/spec_struc_717_coefs_nut2.csv")
-
-
-
 struc_717_all_nut3 <- lapply(struc_mods_717_nut3, get_coef)
 struc_717_all_nut3 = bind_rows(struc_717_all_nut3, .id = "column_label")
-write.csv(struc_717_all_nut3, "results/struc_717_coefs_nut3.csv")
-
 spec_717_all_nut3 <- lapply(spec_mods_717_nut3, get_coef)
 spec_717_all_nut3 = bind_rows(spec_717_all_nut3, .id = "column_label")
-write.csv(spec_717_all_nut3, "results/spec_717_coefs_nut3.csv")
-
 spec_struc_717_all_nut3 <- lapply(spec_struc_mods_717_nut3, get_coef)
 spec_struc_717_all_nut3 = bind_rows(spec_struc_717_all_nut3, .id = "column_label")
+
+
+
+write.csv(struc_619_all_nut1, "results/struc_619_coefs_nut1.csv")
+write.csv(spec_619_all_nut1, "results/spec_619_coefs_nut1.csv")
+write.csv(spec_struc_619_all_nut1, "results/spec_struc_619_coefs_nut1.csv")
+write.csv(struc_703_all_nut1, "results/struc_703_coefs_nut1.csv")
+write.csv(spec_703_all_nut1, "results/spec_703_coefs_nut1.csv")
+write.csv(spec_struc_703_all_nut1, "results/spec_struc_703_coefs_nut1.csv")
+write.csv(struc_703_all_nut2, "results/struc_703_coefs_nut2.csv")
+write.csv(spec_703_all_nut2, "results/spec_703_coefs_nut2.csv")
+write.csv(spec_struc_703_all_nut2, "results/spec_struc_703_coefs_nut2.csv")
+write.csv(struc_717_all_nut1, "results/struc_717_coefs_nut1.csv")
+write.csv(spec_717_all_nut1, "results/spec_717_coefs_nut1.csv")
+write.csv(spec_struc_717_all_nut1, "results/spec_struc_717_coefs_nut1.csv")
+write.csv(struc_717_all_nut2, "results/struc_717_coefs_nut2.csv")
+write.csv(spec_717_all_nut2, "results/spec_717_coefs_nut2.csv")
+write.csv(spec_struc_717_all_nut2, "results/spec_struc_717_coefs_nut2.csv")
+write.csv(struc_717_all_nut3, "results/struc_717_coefs_nut3.csv")
+write.csv(spec_717_all_nut3, "results/spec_717_coefs_nut3.csv")
 write.csv(spec_struc_717_all_nut3, "results/spec_struc_717_coefs_nut3.csv")
 
 
