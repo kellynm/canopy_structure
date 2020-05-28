@@ -54,17 +54,17 @@ csm_703 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2
 csm_717 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/csm/wilson19_717_csm.tif'), tobacco_area)
 dem <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/lidar/wilson19_dem.tif'), tobacco_area)
 
-# nosoil_619 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_619.tif'), tobacco_area)
-# nosoil_703 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_703.tif'), tobacco_area)
-# nosoil_717 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_717.tif'), tobacco_area)
-# 
-# csm_masked_619 <- mask(csm_619, nosoil_619)
-# csm_masked_703 <- mask(csm_619, nosoil_703)
-# csm_masked_717 <- mask(csm_619, nosoil_717)
+nosoil_619 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_619.tif'), tobacco_area)
+nosoil_703 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_703.tif'), tobacco_area)
+nosoil_717 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_717.tif'), tobacco_area)
 
-csm_619_velox <- velox(csm_619)
-csm_703_velox <- velox(csm_703)
-csm_717_velox <- velox(csm_717)
+csm_masked_619 <- mask(csm_619, nosoil_619)
+csm_masked_703 <- mask(csm_703, nosoil_703)
+csm_masked_717 <- mask(csm_717, nosoil_717)
+
+csm_619_velox <- velox(csm_masked_619)
+csm_703_velox <- velox(csm_masked_703)
+csm_717_velox <- velox(csm_masked_717)
 
 plots <- readOGR("H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/layers/plots", "wilson19_plots", stringsAsFactors = F)
 #plots$fertilizer <- as.factor(plots$fertilizer)
@@ -237,13 +237,10 @@ ch_metrics <- function(x){
 
 ch_df_list <- lapply(extract_list, ch_metrics)
 
-histogram(plot_extract_703$`503_A`, nint=40) # High kurtosis
-histogram(plot_extract_703$`504_G`, nint=40) # Low kurtosis
+kurtosis(plot_extract_703$`506_A`, method = "excess")
+kurtosis(plot_extract_703$`306_D`, method = "excess")
 
-kurtosis(plot_extract_703$`503_A`, method = "excess")
-kurtosis(plot_extract_703$`504_G`, method = "excess")
-
-plotNormalHistogram(plot_extract_703$`503_A`, breaks = 40)
+plotNormalHistogram(plot_extract_619$`503_A`, breaks = 40)
 plotNormalHistogram(plot_extract_703$`306_D`, breaks = 40)
 #--------------------------------------------------------- rumple index -----------------------------------------------------------------
 library(lidR)
@@ -753,9 +750,9 @@ vif_func<-function(in_frame,thresh=10,trace=T,...){
   
 }
 
-xvar_619 <- z_619_nut1[,c(6:24,26:29)] # omit PlotCRR and VARI
-xvar_703 <- z_703_nut1[,c(6:24,26:29)]
-xvar_717 <- z_717_nut1[,c(6:24,26:29)]
+xvar_619 <- z_619_nut1[,c("mean","kurt","rumple","crrmedian", "crriqr","moran","watersum","tgi_mean","tgi_sd")] # omit PlotCRR and VARI
+xvar_703 <- z_703_nut1[,c("mean","kurt","rumple","crrmedian", "crriqr","moran","watersum","tgi_mean","tgi_sd")] # omit PlotCRR and VARI
+xvar_717 <- z_717_nut1[,c("mean","kurt","rumple","crrmedian", "crriqr","moran","watersum","tgi_mean","tgi_sd")] # omit PlotCRR and VARI
 
 xkeep_all_619 <- vif_func(xvar_619, 4, F)
 xkeep_all_703 <- vif_func(xvar_703, 4, F)
@@ -800,9 +797,9 @@ topmod_res <- function(y, xkeep, data){
   topmod
 }
 
-xvars_all_fixed <- c("mean","kurt","rumple","crrmedian", "crriqr","moran","watersum","tgi_mean","tgi_sd")
-xvars_spec_fixed <- xvars_all_fixed[c(8:9)]
-xvars_struc_fixed <- xvars_all_fixed[1:7]
+xvars_all_fixed <- c("kurt","rumple","crrmedian", "crriqr","moran","watersum","tgi_mean","tgi_sd")
+xvars_spec_fixed <- xvars_all_fixed[c(7:8)]
+xvars_struc_fixed <- xvars_all_fixed[1:6]
 
 # ---------------------------------- Structural LMs ----------------------------------------------
 struc_619_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_619_nut1)
@@ -883,9 +880,9 @@ spec_struc_mods_717_nut3 <- lapply(yvar, topmod_res, xvars_all_fixed, z_717_nut3
 
 
 # ------------------------------------------- Write results -----------------------------------------------
-col.order.struc<- c("mean", "kurt", "rumple", "crrmedian", "crriqr", "moran", "watersum", "df", "logLik", "AICc", "delta", "weight", "adj_r2", "yvar")
+col.order.struc<- c("kurt", "rumple", "crrmedian", "crriqr", "moran", "watersum", "df", "logLik", "AICc", "delta", "weight", "adj_r2", "yvar")
 col.order.spec <- c("tgi_mean", "tgi_sd", "df", "logLik", "AICc", "delta", "weight", "adj_r2", "yvar")
-col.order.spec_struc <- c("mean", "kurt", "rumple", "crrmedian", "crriqr", "moran", "watersum", "tgi_mean", "tgi_sd","df", "logLik", "AICc", "delta", "weight", "adj_r2", "yvar")
+col.order.spec_struc <- c("kurt", "rumple", "crrmedian", "crriqr", "moran", "watersum", "tgi_mean", "tgi_sd","df", "logLik", "AICc", "delta", "weight", "adj_r2", "yvar")
 
 struc_619_nut1 <- struc_619_nut1[, col.order.struc]
 struc_703_nut1 <- struc_703_nut1[, col.order.struc]
@@ -1047,7 +1044,7 @@ spec_struc_717_nut3$nutrient <- 3
 struc_619_nut1$type <- "structural"
 spec_619_nut1$type <- "spectral"
 spec_struc_619_nut1$type <- "spectral+structural"
-all_619_nut1 <- rbind(struc_619_nut1[,13:17], spec_619_nut1[,8:12], spec_struc_619_nut1[,15:19])
+all_619_nut1 <- rbind(struc_619_nut1[,12:16], spec_619_nut1[,8:12], spec_struc_619_nut1[,14:18])
 
 
 all_619_nut1$yvar <- factor(all_619_nut1$yvar,levels = c("N","P","K","B"))
@@ -1065,7 +1062,7 @@ g1 <- ggplot(data=all_619_nut1, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_703_nut1$type <- "structural"
 spec_703_nut1$type <- "spectral"
 spec_struc_703_nut1$type <- "spectral+structural"
-all_703_nut1 <- rbind(struc_703_nut1[,13:17], spec_703_nut1[,8:12], spec_struc_703_nut1[,15:19])
+all_703_nut1 <- rbind(struc_703_nut1[,12:16], spec_703_nut1[,8:12], spec_struc_703_nut1[,14:18])
 
 
 all_703_nut1$yvar <- factor(all_703_nut1$yvar,levels = c("N","P","K","B"))
@@ -1084,7 +1081,7 @@ g2 <- ggplot(data=all_703_nut1, aes(x=yvar, y=adj_r2, fill=type)) + labs(y=expre
 struc_703_nut2$type <- "structural"
 spec_703_nut2$type <- "spectral"
 spec_struc_703_nut2$type <- "spectral+structural"
-all_703_nut2 <- rbind(struc_703_nut2[,13:17], spec_703_nut2[,8:12], spec_struc_703_nut2[,15:19])
+all_703_nut2 <- rbind(struc_703_nut2[,12:16], spec_703_nut2[,8:12], spec_struc_703_nut2[,14:18])
 
 
 all_703_nut2$yvar <- factor(all_703_nut2$yvar,levels = c("N","P","K","B"))
@@ -1101,7 +1098,7 @@ g3 <- ggplot(data=all_703_nut2, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_717_nut1$type <- "structural"
 spec_717_nut1$type <- "spectral"
 spec_struc_717_nut1$type <- "spectral+structural"
-all_717_nut1 <- rbind(struc_717_nut1[,13:17], spec_717_nut1[,8:12], spec_struc_717_nut1[,15:19])
+all_717_nut1 <- rbind(struc_717_nut1[,12:16], spec_717_nut1[,8:12], spec_struc_717_nut1[,14:18])
 
 
 all_717_nut1$yvar <- factor(all_717_nut1$yvar,levels = c("N","P","K","B"))
@@ -1119,7 +1116,7 @@ g4 <- ggplot(data=all_717_nut1, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_717_nut2$type <- "structural"
 spec_717_nut2$type <- "spectral"
 spec_struc_717_nut2$type <- "spectral+structural"
-all_717_nut2 <- rbind(struc_717_nut2[,13:17], spec_717_nut2[,8:12], spec_struc_717_nut2[,15:19])
+all_717_nut2 <- rbind(struc_717_nut2[,12:16], spec_717_nut2[,8:12], spec_struc_717_nut2[,14:18])
 
 
 all_717_nut2$yvar <- factor(all_717_nut2$yvar,levels = c("N","P","K","B"))
@@ -1137,7 +1134,7 @@ g5 <- ggplot(data=all_717_nut2, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_717_nut3$type <- "structural"
 spec_717_nut3$type <- "spectral"
 spec_struc_717_nut3$type <- "spectral+structural"
-all_717_nut3 <- rbind(struc_717_nut3[,13:17], spec_717_nut3[,8:12], spec_struc_717_nut3[,15:19])
+all_717_nut3 <- rbind(struc_717_nut3[,12:16], spec_717_nut3[,8:12], spec_struc_717_nut3[,14:18])
 
 
 all_717_nut3$yvar <- factor(all_717_nut3$yvar,levels = c("N","P","K","B"))
@@ -1435,10 +1432,10 @@ struc_all <- rbind(struc_619_nut1, struc_703_nut1, struc_703_nut2, struc_717_nut
 struc_all <- struc_all[struc_all$yvar %in% c("N", "P", "K", "B"),]
 struc_all$model <- paste(struc_all$date, "_", struc_all$nutrient)
 
-struc_N <- struc_all[yvar == "N",][,c(1:7,13:14,18)]
-struc_P <- struc_all[yvar == "P",][,c(1:7,13:14,18)]
-struc_K <- struc_all[yvar == "K",][,c(1:7,13:14,18)]
-struc_B <- struc_all[yvar == "B",][,c(1:7,13:14,18)]
+struc_N <- struc_all[yvar == "N",][,c(1:6,12:13,17)]
+struc_P <- struc_all[yvar == "P",][,c(1:6,12:13,17)]
+struc_K <- struc_all[yvar == "K",][,c(1:6,12:13,17)]
+struc_B <- struc_all[yvar == "B",][,c(1:6,12:13,17)]
 
 write.csv(struc_N, "results/struc_N.csv")
 write.csv(struc_P, "results/struc_P.csv")
@@ -1531,10 +1528,10 @@ spec_struc_all <- rbind(spec_struc_619_nut1, spec_struc_703_nut1, spec_struc_703
 spec_struc_all <- spec_struc_all[spec_struc_all$yvar %in% c("N", "P", "K", "B"),]
 spec_struc_all$model <- paste(spec_struc_all$date, "_", spec_struc_all$nutrient)
 
-spec_struc_N <- spec_struc_all[yvar == "N",][,c(1:9,15,16,20)]
-spec_struc_P <- spec_struc_all[yvar == "P",][,c(1:9,15,16,20)]
-spec_struc_K <- spec_struc_all[yvar == "K",][,c(1:9,15,16,20)]
-spec_struc_B <- spec_struc_all[yvar == "B",][,c(1:9,15,16,20)]
+spec_struc_N <- spec_struc_all[yvar == "N",][,c(1:8,14,15,19)]
+spec_struc_P <- spec_struc_all[yvar == "P",][,c(1:8,14,15,19)]
+spec_struc_K <- spec_struc_all[yvar == "K",][,c(1:8,14,15,19)]
+spec_struc_B <- spec_struc_all[yvar == "B",][,c(1:8,14,15,19)]
 
 
 write.csv(spec_struc_N, "results/spec_struc_N.csv")
