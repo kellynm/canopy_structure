@@ -54,9 +54,9 @@ csm_703 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2
 csm_717 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/csm/wilson19_717_csm.tif'), tobacco_area)
 dem <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/lidar/wilson19_dem.tif'), tobacco_area)
 
-nosoil_619 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_619.tif'), tobacco_area)
-nosoil_703 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_703.tif'), tobacco_area)
-nosoil_717 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_717.tif'), tobacco_area)
+nosoil_619 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_619_0.2.tif'), tobacco_area)
+nosoil_703 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_703_0.2.tif'), tobacco_area)
+nosoil_717 <- crop(raster('H:/My Drive/Research/Canopy_Morphology/Tobacco_Project/2019/nosoil/csm_nosoil_717_0.2.tif'), tobacco_area)
 
 csm_masked_619 <- mask(csm_619, nosoil_619)
 csm_masked_703 <- mask(csm_703, nosoil_703)
@@ -166,6 +166,10 @@ tgi_df_list <- lapply(tgiRast_list, tgi_metrics)
 
 #--------------------------------------------------------- SIMWE water depth model---------------------------------------------------------------
 water <- crop(raster("water/wilson19_water.tif"), tobacco_area)
+library(spatialEco)
+
+water_norm <- spatialEco::raster.transformation(water)
+
 
 water_velox <- velox(water)
 water_extract <- water_velox$extract(sp=plots)
@@ -237,11 +241,11 @@ ch_metrics <- function(x){
 
 ch_df_list <- lapply(extract_list, ch_metrics)
 
-kurtosis(plot_extract_703$`506_A`, method = "excess")
-kurtosis(plot_extract_703$`306_D`, method = "excess")
+kurtosis(plot_extract_717$`401_E`, method = "excess")
+kurtosis(plot_extract_717$`402_G`, method = "excess")
 
-plotNormalHistogram(plot_extract_619$`503_A`, breaks = 40)
-plotNormalHistogram(plot_extract_703$`306_D`, breaks = 40)
+plotNormalHistogram(plot_extract_717$`401_E`, breaks = 40, xlab="canopy pixel height (m)", ylab="", cex.axis=2, cex.lab = 2)
+plotNormalHistogram(plot_extract_717$`402_G`, breaks = 40, xlab="canopy pixel height (m)", ylab="", cex.axis=2, cex.lab = 2)
 #--------------------------------------------------------- rumple index -----------------------------------------------------------------
 library(lidR)
 
@@ -452,9 +456,12 @@ names(agg_717_nut3)[2] <- "spad"
 # # ------------------------------------ Correlation tests ------------------------------------------
 library(ggpubr)
 # 
-pairs(z_619[,c(20, 21, 26, 29, 31, 32, 34, 35,37, 38)], main="Simple Scatterplot Matrix")
+pairs(z_619_nut1[,c("iqr", "median","kurt","skew","rumple","crrmedian", "crriqr","moran","watersum","tgi_mean","tgi_sd")]) # omit PlotCRR and VARI
+pairs(z_703_nut1[,c("mean","kurt","skew","rumple","crrmedian", "crriqr","moran","watersum","tgi_mean","tgi_sd")])
+pairs(z_717_nut1[,c("median","kurt","skew","rumple","crrmedian", "crriqr","moran","watersum","tgi_mean","tgi_sd")])
 
-cor(z_619[,c(19:35,37:39)])
+
+cor(z_619_nut1[,c("mean","kurt","skew","rumple","crrmedian", "crriqr","moran","watersum","tgi_mean","tgi_sd")])
 
 pairs(agg_619_nut1[,c("N","P","K","B")])
 pairs(agg_703_nut2[,c("N","P","K","B")])
@@ -750,9 +757,13 @@ vif_func<-function(in_frame,thresh=10,trace=T,...){
   
 }
 
-xvar_619 <- z_619_nut1[,c("mean","kurt","rumple","crrmedian", "crriqr","moran","watersum","tgi_mean","tgi_sd")] # omit PlotCRR and VARI
-xvar_703 <- z_703_nut1[,c("mean","kurt","rumple","crrmedian", "crriqr","moran","watersum","tgi_mean","tgi_sd")] # omit PlotCRR and VARI
-xvar_717 <- z_717_nut1[,c("mean","kurt","rumple","crrmedian", "crriqr","moran","watersum","tgi_mean","tgi_sd")] # omit PlotCRR and VARI
+xvar_619 <- z_619_nut1[,c("mean", "kurt","crrmedian", "crriqr","rumple","moran","watersum")] # omit PlotCRR and VARI
+xvar_703 <- z_703_nut1[,c("mean","kurt","rumple","crrmedian", "crriqr","moran","watersum")] # omit PlotCRR and VARI
+xvar_717 <- z_717_nut1[,c("mean","kurt","rumple","crrmedian", "crriqr","moran","watersum")] # omit PlotCRR and VARI
+
+xvar_619 <- z_619_nut1[,c("kurt","rumple","crrmedian", "crriqr","moran","watersum", "tgi_mean", "tgi_sd")] # omit PlotCRR and VARI
+xvar_703 <- z_703_nut1[,c("kurt","rumple","crrmedian", "crriqr","moran","watersum", "tgi_mean", "tgi_sd")] # omit PlotCRR and VARI
+xvar_717 <- z_717_nut1[,c("kurt","rumple","crrmedian", "crriqr","moran","watersum", "tgi_mean", "tgi_sd")] # omit PlotCRR and VARI
 
 xkeep_all_619 <- vif_func(xvar_619, 4, F)
 xkeep_all_703 <- vif_func(xvar_703, 4, F)
@@ -771,7 +782,7 @@ xkeep_spec_703 <- xkeep_all_703[1:2]
 xkeep_struct_717 <- xkeep_all_717[3:9]
 xkeep_spec_717 <- xkeep_all_717[1:2]
 
-yvar <- c("N", "P","K", "B")
+yvar <- c("N","K", "B")
 
 
 lm_compare <- function(y, xkeep, data){
@@ -797,9 +808,9 @@ topmod_res <- function(y, xkeep, data){
   topmod
 }
 
-xvars_all_fixed <- c("kurt","rumple","crrmedian", "crriqr","moran","watersum","tgi_mean","tgi_sd")
-xvars_spec_fixed <- xvars_all_fixed[c(7:8)]
-xvars_struc_fixed <- xvars_all_fixed[1:6]
+xvars_all_fixed <- c("mean", "kurt","crrmedian", "crriqr","rumple","moran","watersum","tgi_mean","tgi_sd")
+xvars_spec_fixed <- xvars_all_fixed[c(8:9)]
+xvars_struc_fixed <- xvars_all_fixed[1:7]
 
 # ---------------------------------- Structural LMs ----------------------------------------------
 struc_619_nut1 <- lapply(X=yvar, FUN=lm_compare, xkeep=xvars_struc_fixed, data=z_619_nut1)
@@ -880,9 +891,9 @@ spec_struc_mods_717_nut3 <- lapply(yvar, topmod_res, xvars_all_fixed, z_717_nut3
 
 
 # ------------------------------------------- Write results -----------------------------------------------
-col.order.struc<- c("kurt", "rumple", "crrmedian", "crriqr", "moran", "watersum", "df", "logLik", "AICc", "delta", "weight", "adj_r2", "yvar")
+col.order.struc<- c("mean", "kurt","rumple","crrmedian", "crriqr","moran","watersum", "df", "logLik", "AICc", "delta", "weight", "adj_r2", "yvar")
 col.order.spec <- c("tgi_mean", "tgi_sd", "df", "logLik", "AICc", "delta", "weight", "adj_r2", "yvar")
-col.order.spec_struc <- c("kurt", "rumple", "crrmedian", "crriqr", "moran", "watersum", "tgi_mean", "tgi_sd","df", "logLik", "AICc", "delta", "weight", "adj_r2", "yvar")
+col.order.spec_struc <- c("mean", "kurt","rumple","crrmedian", "crriqr","moran","watersum", "tgi_mean", "tgi_sd","df", "logLik", "AICc", "delta", "weight", "adj_r2", "yvar")
 
 struc_619_nut1 <- struc_619_nut1[, col.order.struc]
 struc_703_nut1 <- struc_703_nut1[, col.order.struc]
@@ -905,26 +916,26 @@ spec_struc_717_nut1 <- spec_struc_717_nut1[, col.order.spec_struc]
 spec_struc_717_nut2 <- spec_struc_717_nut2[, col.order.spec_struc]
 spec_struc_717_nut3 <- spec_struc_717_nut3[, col.order.spec_struc]
 
-write.csv(struc_619_nut1, "results/struc_619_nut1.csv")
-write.csv(struc_703_nut1, "results/struc_703_nut1.csv")
-write.csv(struc_703_nut2, "results/struc_703_nut2.csv")
-write.csv(struc_717_nut1, "results/struc_717_nut1.csv")
-write.csv(struc_717_nut2, "results/struc_717_nut2.csv")
-write.csv(struc_717_nut3, "results/struc_717_nut3.csv")
-
-write.csv(spec_619_nut1, "results/spec_619_nut1.csv")
-write.csv(spec_703_nut1, "results/spec_703_nut1.csv")
-write.csv(spec_703_nut2, "results/spec_703_nut2.csv")
-write.csv(spec_717_nut1, "results/spec_717_nut1.csv")
-write.csv(spec_717_nut2, "results/spec_717_nut2.csv")
-write.csv(spec_717_nut3, "results/spec_717_nut3.csv")
-
-write.csv(spec_struc_619_nut1, "results/spec_struc_619_nut1.csv")
-write.csv(spec_struc_703_nut1, "results/spec_struc_703_nut1.csv")
-write.csv(spec_struc_703_nut2, "results/spec_struc_703_nut2.csv")
-write.csv(spec_struc_717_nut1, "results/spec_struc_717_nut1.csv")
-write.csv(spec_struc_717_nut2, "results/spec_struc_717_nut2.csv")
-write.csv(spec_struc_717_nut3, "results/spec_struc_717_nut3.csv")
+# write.csv(struc_619_nut1, "results/struc_619_nut1.csv")
+# write.csv(struc_703_nut1, "results/struc_703_nut1.csv")
+# write.csv(struc_703_nut2, "results/struc_703_nut2.csv")
+# write.csv(struc_717_nut1, "results/struc_717_nut1.csv")
+# write.csv(struc_717_nut2, "results/struc_717_nut2.csv")
+# write.csv(struc_717_nut3, "results/struc_717_nut3.csv")
+# 
+# write.csv(spec_619_nut1, "results/spec_619_nut1.csv")
+# write.csv(spec_703_nut1, "results/spec_703_nut1.csv")
+# write.csv(spec_703_nut2, "results/spec_703_nut2.csv")
+# write.csv(spec_717_nut1, "results/spec_717_nut1.csv")
+# write.csv(spec_717_nut2, "results/spec_717_nut2.csv")
+# write.csv(spec_717_nut3, "results/spec_717_nut3.csv")
+# 
+# write.csv(spec_struc_619_nut1, "results/spec_struc_619_nut1.csv")
+# write.csv(spec_struc_703_nut1, "results/spec_struc_703_nut1.csv")
+# write.csv(spec_struc_703_nut2, "results/spec_struc_703_nut2.csv")
+# write.csv(spec_struc_717_nut1, "results/spec_struc_717_nut1.csv")
+# write.csv(spec_struc_717_nut2, "results/spec_struc_717_nut2.csv")
+# write.csv(spec_struc_717_nut3, "results/spec_struc_717_nut3.csv")
 
 get_coef <- function(mod){
   df <- as.data.frame(coef(summary(mod)))
@@ -973,25 +984,25 @@ spec_struc_717_all_nut3 <- lapply(spec_struc_mods_717_nut3, get_coef)
 spec_struc_717_all_nut3 = bind_rows(spec_struc_717_all_nut3, .id = "column_label")
 
 
-
-write.csv(struc_619_all_nut1, "results/struc_619_coefs_nut1.csv")
-write.csv(spec_619_all_nut1, "results/spec_619_coefs_nut1.csv")
-write.csv(spec_struc_619_all_nut1, "results/spec_struc_619_coefs_nut1.csv")
-write.csv(struc_703_all_nut1, "results/struc_703_coefs_nut1.csv")
-write.csv(spec_703_all_nut1, "results/spec_703_coefs_nut1.csv")
-write.csv(spec_struc_703_all_nut1, "results/spec_struc_703_coefs_nut1.csv")
-write.csv(struc_703_all_nut2, "results/struc_703_coefs_nut2.csv")
-write.csv(spec_703_all_nut2, "results/spec_703_coefs_nut2.csv")
-write.csv(spec_struc_703_all_nut2, "results/spec_struc_703_coefs_nut2.csv")
-write.csv(struc_717_all_nut1, "results/struc_717_coefs_nut1.csv")
-write.csv(spec_717_all_nut1, "results/spec_717_coefs_nut1.csv")
-write.csv(spec_struc_717_all_nut1, "results/spec_struc_717_coefs_nut1.csv")
-write.csv(struc_717_all_nut2, "results/struc_717_coefs_nut2.csv")
-write.csv(spec_717_all_nut2, "results/spec_717_coefs_nut2.csv")
-write.csv(spec_struc_717_all_nut2, "results/spec_struc_717_coefs_nut2.csv")
-write.csv(struc_717_all_nut3, "results/struc_717_coefs_nut3.csv")
-write.csv(spec_717_all_nut3, "results/spec_717_coefs_nut3.csv")
-write.csv(spec_struc_717_all_nut3, "results/spec_struc_717_coefs_nut3.csv")
+# 
+# write.csv(struc_619_all_nut1, "results/struc_619_coefs_nut1.csv")
+# write.csv(spec_619_all_nut1, "results/spec_619_coefs_nut1.csv")
+# write.csv(spec_struc_619_all_nut1, "results/spec_struc_619_coefs_nut1.csv")
+# write.csv(struc_703_all_nut1, "results/struc_703_coefs_nut1.csv")
+# write.csv(spec_703_all_nut1, "results/spec_703_coefs_nut1.csv")
+# write.csv(spec_struc_703_all_nut1, "results/spec_struc_703_coefs_nut1.csv")
+# write.csv(struc_703_all_nut2, "results/struc_703_coefs_nut2.csv")
+# write.csv(spec_703_all_nut2, "results/spec_703_coefs_nut2.csv")
+# write.csv(spec_struc_703_all_nut2, "results/spec_struc_703_coefs_nut2.csv")
+# write.csv(struc_717_all_nut1, "results/struc_717_coefs_nut1.csv")
+# write.csv(spec_717_all_nut1, "results/spec_717_coefs_nut1.csv")
+# write.csv(spec_struc_717_all_nut1, "results/spec_struc_717_coefs_nut1.csv")
+# write.csv(struc_717_all_nut2, "results/struc_717_coefs_nut2.csv")
+# write.csv(spec_717_all_nut2, "results/spec_717_coefs_nut2.csv")
+# write.csv(spec_struc_717_all_nut2, "results/spec_struc_717_coefs_nut2.csv")
+# write.csv(struc_717_all_nut3, "results/struc_717_coefs_nut3.csv")
+# write.csv(spec_717_all_nut3, "results/spec_717_coefs_nut3.csv")
+# write.csv(spec_struc_717_all_nut3, "results/spec_struc_717_coefs_nut3.csv")
 
 
 
@@ -1044,10 +1055,10 @@ spec_struc_717_nut3$nutrient <- 3
 struc_619_nut1$type <- "structural"
 spec_619_nut1$type <- "spectral"
 spec_struc_619_nut1$type <- "spectral+structural"
-all_619_nut1 <- rbind(struc_619_nut1[,12:16], spec_619_nut1[,8:12], spec_struc_619_nut1[,14:18])
+all_619_nut1 <- rbind(struc_619_nut1[,13:17], spec_619_nut1[,8:12], spec_struc_619_nut1[,15:19])
 
 
-all_619_nut1$yvar <- factor(all_619_nut1$yvar,levels = c("N","P","K","B"))
+all_619_nut1$yvar <- factor(all_619_nut1$yvar,levels = c("N","K","B"))
 all_619_nut1$type <- factor(all_619_nut1$type, levels = c("structural", "spectral", "spectral+structural"))
 
 g1 <- ggplot(data=all_619_nut1, aes(x=yvar, y=adj_r2, fill=type)) +
@@ -1062,10 +1073,10 @@ g1 <- ggplot(data=all_619_nut1, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_703_nut1$type <- "structural"
 spec_703_nut1$type <- "spectral"
 spec_struc_703_nut1$type <- "spectral+structural"
-all_703_nut1 <- rbind(struc_703_nut1[,12:16], spec_703_nut1[,8:12], spec_struc_703_nut1[,14:18])
+all_703_nut1 <- rbind(struc_703_nut1[,13:17], spec_703_nut1[,8:12], spec_struc_703_nut1[,15:19])
 
 
-all_703_nut1$yvar <- factor(all_703_nut1$yvar,levels = c("N","P","K","B"))
+all_703_nut1$yvar <- factor(all_703_nut1$yvar,levels = c("N","K","B"))
 all_703_nut1$type <- factor(all_703_nut1$type, levels = c("structural", "spectral", "spectral+structural"))
 
 g2 <- ggplot(data=all_703_nut1, aes(x=yvar, y=adj_r2, fill=type)) + labs(y=expression("adjusted" ~ R^{2})) +
@@ -1081,10 +1092,10 @@ g2 <- ggplot(data=all_703_nut1, aes(x=yvar, y=adj_r2, fill=type)) + labs(y=expre
 struc_703_nut2$type <- "structural"
 spec_703_nut2$type <- "spectral"
 spec_struc_703_nut2$type <- "spectral+structural"
-all_703_nut2 <- rbind(struc_703_nut2[,12:16], spec_703_nut2[,8:12], spec_struc_703_nut2[,14:18])
+all_703_nut2 <- rbind(struc_703_nut2[,13:17], spec_703_nut2[,8:12], spec_struc_703_nut2[,15:19])
 
 
-all_703_nut2$yvar <- factor(all_703_nut2$yvar,levels = c("N","P","K","B"))
+all_703_nut2$yvar <- factor(all_703_nut2$yvar,levels = c("N","K","B"))
 all_703_nut2$type <- factor(all_703_nut2$type, levels = c("structural", "spectral", "spectral+structural"))
 
 g3 <- ggplot(data=all_703_nut2, aes(x=yvar, y=adj_r2, fill=type)) +
@@ -1098,10 +1109,10 @@ g3 <- ggplot(data=all_703_nut2, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_717_nut1$type <- "structural"
 spec_717_nut1$type <- "spectral"
 spec_struc_717_nut1$type <- "spectral+structural"
-all_717_nut1 <- rbind(struc_717_nut1[,12:16], spec_717_nut1[,8:12], spec_struc_717_nut1[,14:18])
+all_717_nut1 <- rbind(struc_717_nut1[,13:17], spec_717_nut1[,8:12], spec_struc_717_nut1[,15:19])
 
 
-all_717_nut1$yvar <- factor(all_717_nut1$yvar,levels = c("N","P","K","B"))
+all_717_nut1$yvar <- factor(all_717_nut1$yvar,levels = c("N","K","B"))
 all_717_nut1$type <- factor(all_717_nut1$type, levels = c("structural", "spectral", "spectral+structural"))
 
 g4 <- ggplot(data=all_717_nut1, aes(x=yvar, y=adj_r2, fill=type)) +
@@ -1116,10 +1127,10 @@ g4 <- ggplot(data=all_717_nut1, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_717_nut2$type <- "structural"
 spec_717_nut2$type <- "spectral"
 spec_struc_717_nut2$type <- "spectral+structural"
-all_717_nut2 <- rbind(struc_717_nut2[,12:16], spec_717_nut2[,8:12], spec_struc_717_nut2[,14:18])
+all_717_nut2 <- rbind(struc_717_nut2[,13:17], spec_717_nut2[,8:12], spec_struc_717_nut2[,15:19])
 
 
-all_717_nut2$yvar <- factor(all_717_nut2$yvar,levels = c("N","P","K","B"))
+all_717_nut2$yvar <- factor(all_717_nut2$yvar,levels = c("N","K","B"))
 all_717_nut2$type <- factor(all_717_nut2$type, levels = c("structural", "spectral", "spectral+structural"))
 
 g5 <- ggplot(data=all_717_nut2, aes(x=yvar, y=adj_r2, fill=type)) +
@@ -1134,10 +1145,10 @@ g5 <- ggplot(data=all_717_nut2, aes(x=yvar, y=adj_r2, fill=type)) +
 struc_717_nut3$type <- "structural"
 spec_717_nut3$type <- "spectral"
 spec_struc_717_nut3$type <- "spectral+structural"
-all_717_nut3 <- rbind(struc_717_nut3[,12:16], spec_717_nut3[,8:12], spec_struc_717_nut3[,14:18])
+all_717_nut3 <- rbind(struc_717_nut3[,13:17], spec_717_nut3[,8:12], spec_struc_717_nut3[,15:19])
 
 
-all_717_nut3$yvar <- factor(all_717_nut3$yvar,levels = c("N","P","K","B"))
+all_717_nut3$yvar <- factor(all_717_nut3$yvar,levels = c("N","K","B"))
 all_717_nut3$type <- factor(all_717_nut3$type, levels = c("structural", "spectral", "spectral+structural"))
 
 g6 <- ggplot(data=all_717_nut3, aes(x=yvar, y=adj_r2, fill=type)) +
@@ -1153,14 +1164,19 @@ g6 <- ggplot(data=all_717_nut3, aes(x=yvar, y=adj_r2, fill=type)) +
 all_dates <- rbind(all_619_nut1, all_703_nut1, all_703_nut2, all_717_nut1, all_717_nut2, all_717_nut3)
 all_dates$date <- factor(all_dates$date, levels = c("June 19", "July 3", "July 17"))
 
-ggplot(data=all_dates, aes(x=yvar, y=adj_r2, fill=type)) +
-  geom_bar(stat="identity", width=0.6, position=position_dodge(width=0.8))+
-  xlab('response variable') + labs(y=expression(paste("adjusted R "^"2"))) + ylim(0,0.81) + facet_wrap(~date+nutrient) +
-  theme(strip.text.x = element_text(size = 10, face = "bold"), text = element_text(size=10, family="CM Roman")) + theme_hc() + 
-  scale_fill_discrete(name = "", labels = c("stuctural metrics", "spectral metrics", "spectral + structural metrics"))
+# ggplot(data=all_dates, aes(x=yvar, y=adj_r2, fill=type)) +
+#   geom_bar(stat="identity", width=0.6, position=position_dodge(width=0.8))+
+#   xlab('response variable') + labs(y=expression(paste("adjusted R "^"2"))) + ylim(0,0.81) + facet_wrap(~date+nutrient) +
+#   theme(strip.text.x = element_text(size = 10, face = "bold"), text = element_text(size=10, family="CM Roman")) + theme_hc() + 
+#   scale_fill_discrete(name = "", labels = c("stuctural metrics", "spectral metrics", "spectral + structural metrics"))
 
 ylab <- expression(paste("adjusted R "^"2"))
-grid.arrange(g1, g2, g3, g4, g5, g6, layout_matrix = rbind(c(1, NA, NA), c(2,3, NA), c(4,5,6)))
+
+
+plots <- list(g1, g2, g3, g4, g5, g6)
+margin = theme(plot.margin = unit(c(0.05,0.1,0.05,0.1), "cm"))
+grid.arrange(grobs = lapply(plots, "+", margin),layout_matrix = rbind(c(NA, NA, 6), c(NA, 3, 5), c(1,2,4)))
+grid.arrange(g1, g2, g3, g4, g5, g6, layout_matrix = rbind(c(NA, NA, 6), c(NA, 3, 5), c(1,2,4)))
 
 #-------------------------------------------- by nutrient plots --------------------------------------------------
 # 
@@ -1286,117 +1302,117 @@ grid.arrange(g1, g2, g3, g4, g5, g6, layout_matrix = rbind(c(1, NA, NA), c(2,3, 
 
 # Regression model tables for 619 nutrients ONLY
 
-n_struc_mods <- list(struc_mods_619[[1]], struc_mods_703[[1]], struc_mods_717[[1]])
-stargazer(n_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "Rumple index", "canopy relief ratio median", 
-                               "canopy relief ratio IQR", "Moran's I", "water accumulation (m)"))
-
-n_spec_mods <- list(spec_mods_619[[1]], spec_mods_703[[1]], spec_mods_717[[1]])
-stargazer(n_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("TGI mean", "TGI standard deviation"))
-
-n_spec_struc_mods <- list(spec_struc_mods_619[[1]], spec_struc_mods_703[[1]], spec_struc_mods_717[[1]])
-stargazer(n_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height mean (m)", "TGI mean", "crop height histogram kurtosis", "Rumple index", "canopy relief ratio median", 
-                               "Moran's I", "water accumulation (m)", "TGI standard deviation"))
-
-
-p_struc_mods <- list(struc_mods_619[[2]], struc_mods_703[[2]], struc_mods_717[[2]])
-stargazer(p_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "canopy relief ratio median"))
-
-p_spec_mods <- list(spec_mods_619[[2]], spec_mods_703[[2]], spec_mods_717[[2]])
-stargazer(p_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("TGI mean", "TGI standard deviation"))
-
-p_spec_struc_mods <- list(spec_struc_mods_619[[2]], spec_struc_mods_703[[2]], spec_struc_mods_717[[2]])
-stargazer(p_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height mean (m)", "TGI mean", "crop height histogram kurtosis", "Rumple index",
-                               "canopy relief ratio IQR", "water accumulation (m)", "TGI standard deviation"))
-
-k_struc_mods <- list(struc_mods_619[[3]], struc_mods_703[[3]], struc_mods_717[[3]])
-stargazer(k_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("Rumple index", "canopy relief ratio median"))
-
-k_spec_mods <- list(spec_mods_619[[3]], spec_mods_703[[3]], spec_mods_717[[3]])
-stargazer(k_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("TGI mean", "TGI standard deviation"))
-
-k_spec_struc_mods <- list(spec_struc_mods_619[[3]], spec_struc_mods_703[[3]], spec_struc_mods_717[[3]])
-stargazer(k_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("TGI mean", "canopy relief ratio median",
-                               "canopy relief ratio IQR","Moran's I", "water accumulation (m)", "TGI standard deviation"))
-
-b_struc_mods <- list(struc_mods_619[[10]], struc_mods_703[[10]], struc_mods_717[[10]])
-stargazer(b_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "Rumple index", "canopy relief ratio median",
-                               "canopy relief ratio IQR","Moran's I"))
-
-b_spec_mods <- list(spec_mods_619[[10]], spec_mods_703[[10]], spec_mods_717[[10]])
-stargazer(b_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("TGI mean", "TGI standard deviation"))
-
-b_spec_struc_mods <- list(spec_struc_mods_619[[10]], spec_struc_mods_703[[10]], spec_struc_mods_717[[10]])
-stargazer(b_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height mean (m)", "TGI mean", "crop height histogram kurtosis", "Rumple index","canopy relief ratio median",
-                               "canopy relief ratio IQR","Moran's I"))
-
-
-
-# Regression model tables USING NUTRIENTS BY DATE
-
-n_struc_mods <- list(struc_mods_619[[1]], struc_mods_703[[1]], struc_mods_717[[1]])
-stargazer(n_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "Rumple index", "canopy relief ratio median", 
-                               "canopy relief ratio IQR", "Moran's I", "water accumulation (m)"))
-
-n_spec_mods <- list(spec_mods_619[[1]], spec_mods_703[[1]], spec_mods_717[[1]])
-stargazer(n_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("TGI mean", "TGI standard deviation"))
-
-n_spec_struc_mods <- list(spec_struc_mods_619[[1]], spec_struc_mods_703[[1]], spec_struc_mods_717[[1]])
-stargazer(n_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("TGI mean", "Rumple index", "canopy relief ratio median", 
-                               "Moran's I", "water accumulation (m)", "TGI standard deviation"))
-
-
-p_struc_mods <- list(struc_mods_619[[2]], struc_mods_703[[2]], struc_mods_717[[2]])
-stargazer(p_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "canopy relief ratio median"))
-
-p_spec_mods <- list(spec_mods_619[[2]], spec_mods_703[[2]], spec_mods_717[[2]])
-stargazer(p_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("TGI mean", "TGI standard deviation"))
-
-p_spec_struc_mods <- list(spec_struc_mods_619[[2]], spec_struc_mods_703[[2]], spec_struc_mods_717[[2]])
-stargazer(p_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height mean (m)", "canopy relief ratio median",
-                               "canopy relief ratio IQR", "water accumulation (m)", "TGI standard deviation"))
-
-k_struc_mods <- list(struc_mods_619[[3]], struc_mods_703[[3]], struc_mods_717[[3]])
-stargazer(k_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("Rumple index", "canopy relief ratio median", "canopy relief ratio IQR", "Moran's I"))
-
-k_spec_mods <- list(spec_mods_619[[3]], spec_mods_703[[3]], spec_mods_717[[3]])
-stargazer(k_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("TGI mean", "TGI standard deviation"))
-
-k_spec_struc_mods <- list(spec_struc_mods_619[[3]], spec_struc_mods_703[[3]], spec_struc_mods_717[[3]])
-stargazer(k_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("TGI mean", "canopy relief ratio median",
-                               "canopy relief ratio IQR","Moran's I", "water accumulation (m)", "TGI standard deviation"))
-
-b_struc_mods <- list(struc_mods_619[[10]], struc_mods_703[[10]], struc_mods_717[[10]])
-stargazer(b_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("crop height mean (m)", "Rumple index", "canopy relief ratio median"))
-
-b_spec_mods <- list(spec_mods_619[[10]], spec_mods_703[[10]], spec_mods_717[[10]])
-stargazer(b_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T)
-
-b_spec_struc_mods <- list(spec_struc_mods_619[[10]], spec_struc_mods_703[[10]], spec_struc_mods_717[[10]])
-stargazer(b_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
-          covariate.labels = c("TGI mean", "crop height mean (m)", "Rumple index","canopy relief ratio median",
-                               "Moran's I",  "water accumulation (m)"))
+# n_struc_mods <- list(struc_mods_619[[1]], struc_mods_703[[1]], struc_mods_717[[1]])
+# stargazer(n_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "Rumple index", "canopy relief ratio median", 
+#                                "canopy relief ratio IQR", "Moran's I", "water accumulation (m)"))
+# 
+# n_spec_mods <- list(spec_mods_619[[1]], spec_mods_703[[1]], spec_mods_717[[1]])
+# stargazer(n_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("TGI mean", "TGI standard deviation"))
+# 
+# n_spec_struc_mods <- list(spec_struc_mods_619[[1]], spec_struc_mods_703[[1]], spec_struc_mods_717[[1]])
+# stargazer(n_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("crop height mean (m)", "TGI mean", "crop height histogram kurtosis", "Rumple index", "canopy relief ratio median", 
+#                                "Moran's I", "water accumulation (m)", "TGI standard deviation"))
+# 
+# 
+# p_struc_mods <- list(struc_mods_619[[2]], struc_mods_703[[2]], struc_mods_717[[2]])
+# stargazer(p_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "canopy relief ratio median"))
+# 
+# p_spec_mods <- list(spec_mods_619[[2]], spec_mods_703[[2]], spec_mods_717[[2]])
+# stargazer(p_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("TGI mean", "TGI standard deviation"))
+# 
+# p_spec_struc_mods <- list(spec_struc_mods_619[[2]], spec_struc_mods_703[[2]], spec_struc_mods_717[[2]])
+# stargazer(p_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("crop height mean (m)", "TGI mean", "crop height histogram kurtosis", "Rumple index",
+#                                "canopy relief ratio IQR", "water accumulation (m)", "TGI standard deviation"))
+# 
+# k_struc_mods <- list(struc_mods_619[[3]], struc_mods_703[[3]], struc_mods_717[[3]])
+# stargazer(k_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("Rumple index", "canopy relief ratio median"))
+# 
+# k_spec_mods <- list(spec_mods_619[[3]], spec_mods_703[[3]], spec_mods_717[[3]])
+# stargazer(k_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("TGI mean", "TGI standard deviation"))
+# 
+# k_spec_struc_mods <- list(spec_struc_mods_619[[3]], spec_struc_mods_703[[3]], spec_struc_mods_717[[3]])
+# stargazer(k_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("TGI mean", "canopy relief ratio median",
+#                                "canopy relief ratio IQR","Moran's I", "water accumulation (m)", "TGI standard deviation"))
+# 
+# b_struc_mods <- list(struc_mods_619[[10]], struc_mods_703[[10]], struc_mods_717[[10]])
+# stargazer(b_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "Rumple index", "canopy relief ratio median",
+#                                "canopy relief ratio IQR","Moran's I"))
+# 
+# b_spec_mods <- list(spec_mods_619[[10]], spec_mods_703[[10]], spec_mods_717[[10]])
+# stargazer(b_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("TGI mean", "TGI standard deviation"))
+# 
+# b_spec_struc_mods <- list(spec_struc_mods_619[[10]], spec_struc_mods_703[[10]], spec_struc_mods_717[[10]])
+# stargazer(b_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("crop height mean (m)", "TGI mean", "crop height histogram kurtosis", "Rumple index","canopy relief ratio median",
+#                                "canopy relief ratio IQR","Moran's I"))
+# 
+# 
+# 
+# # Regression model tables USING NUTRIENTS BY DATE
+# 
+# n_struc_mods <- list(struc_mods_619[[1]], struc_mods_703[[1]], struc_mods_717[[1]])
+# stargazer(n_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "Rumple index", "canopy relief ratio median", 
+#                                "canopy relief ratio IQR", "Moran's I", "water accumulation (m)"))
+# 
+# n_spec_mods <- list(spec_mods_619[[1]], spec_mods_703[[1]], spec_mods_717[[1]])
+# stargazer(n_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("TGI mean", "TGI standard deviation"))
+# 
+# n_spec_struc_mods <- list(spec_struc_mods_619[[1]], spec_struc_mods_703[[1]], spec_struc_mods_717[[1]])
+# stargazer(n_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("TGI mean", "Rumple index", "canopy relief ratio median", 
+#                                "Moran's I", "water accumulation (m)", "TGI standard deviation"))
+# 
+# 
+# p_struc_mods <- list(struc_mods_619[[2]], struc_mods_703[[2]], struc_mods_717[[2]])
+# stargazer(p_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("crop height mean (m)", "crop height histogram kurtosis", "canopy relief ratio median"))
+# 
+# p_spec_mods <- list(spec_mods_619[[2]], spec_mods_703[[2]], spec_mods_717[[2]])
+# stargazer(p_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("TGI mean", "TGI standard deviation"))
+# 
+# p_spec_struc_mods <- list(spec_struc_mods_619[[2]], spec_struc_mods_703[[2]], spec_struc_mods_717[[2]])
+# stargazer(p_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("crop height mean (m)", "canopy relief ratio median",
+#                                "canopy relief ratio IQR", "water accumulation (m)", "TGI standard deviation"))
+# 
+# k_struc_mods <- list(struc_mods_619[[3]], struc_mods_703[[3]], struc_mods_717[[3]])
+# stargazer(k_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("Rumple index", "canopy relief ratio median", "canopy relief ratio IQR", "Moran's I"))
+# 
+# k_spec_mods <- list(spec_mods_619[[3]], spec_mods_703[[3]], spec_mods_717[[3]])
+# stargazer(k_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("TGI mean", "TGI standard deviation"))
+# 
+# k_spec_struc_mods <- list(spec_struc_mods_619[[3]], spec_struc_mods_703[[3]], spec_struc_mods_717[[3]])
+# stargazer(k_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("TGI mean", "canopy relief ratio median",
+#                                "canopy relief ratio IQR","Moran's I", "water accumulation (m)", "TGI standard deviation"))
+# 
+# b_struc_mods <- list(struc_mods_619[[10]], struc_mods_703[[10]], struc_mods_717[[10]])
+# stargazer(b_struc_mods, omit.stat = c("f"), order = xvars_struc_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("crop height mean (m)", "Rumple index", "canopy relief ratio median"))
+# 
+# b_spec_mods <- list(spec_mods_619[[10]], spec_mods_703[[10]], spec_mods_717[[10]])
+# stargazer(b_spec_mods, omit.stat = c("f"), order = xvars_spec_fixed, single.row = F, no.space = T, align = T)
+# 
+# b_spec_struc_mods <- list(spec_struc_mods_619[[10]], spec_struc_mods_703[[10]], spec_struc_mods_717[[10]])
+# stargazer(b_spec_struc_mods, omit.stat = c("f"), order = xvars_all_fixed, single.row = F, no.space = T, align = T,
+#           covariate.labels = c("TGI mean", "crop height mean (m)", "Rumple index","canopy relief ratio median",
+#                                "Moran's I",  "water accumulation (m)"))
 
 
 # Nutrient summary tables
@@ -1407,9 +1423,9 @@ stargazer(agg_717[,c(2:4, 12)])
 
 # Metric summary tables
 
-stargazer(plots_619@data[,xvars_all_fixed])
-stargazer(plots_703@data[,xvars_all_fixed])
-stargazer(plots_717@data[,xvars_all_fixed])
+stargazer(plots_619@data[,c("mean","sd","kurt","skew","rumple","crrmedian","crriqr","moran","tgi_mean","tgi_sd")])
+stargazer(plots_703@data[,c("mean","sd","kurt","skew","rumple","crrmedian","crriqr","moran","tgi_mean","tgi_sd")])
+stargazer(plots_717@data[,c("mean","sd","kurt","skew","rumple","crrmedian","crriqr","moran","tgi_mean","tgi_sd")])
 
 stargazer(plots_619@data[,23:67])
 stargazer(plots_703@data[,23:67])
@@ -1429,18 +1445,90 @@ struc_717_nut2 <- as.data.table(struc_717_nut2)
 struc_717_nut3 <- as.data.table(struc_717_nut3)
 
 struc_all <- rbind(struc_619_nut1, struc_703_nut1, struc_703_nut2, struc_717_nut1, struc_717_nut2, struc_717_nut3, fill = T)
-struc_all <- struc_all[struc_all$yvar %in% c("N", "P", "K", "B"),]
+struc_all <- struc_all[struc_all$yvar %in% c("N", "K", "B"),]
 struc_all$model <- paste(struc_all$date, "_", struc_all$nutrient)
+struc_all <- struc_all[,c(1:7,13,14,18)]
 
-struc_N <- struc_all[yvar == "N",][,c(1:6,12:13,17)]
-struc_P <- struc_all[yvar == "P",][,c(1:6,12:13,17)]
-struc_K <- struc_all[yvar == "K",][,c(1:6,12:13,17)]
-struc_B <- struc_all[yvar == "B",][,c(1:6,12:13,17)]
+write.csv(struc_all, "results/struc_all.csv")
 
-write.csv(struc_N, "results/struc_N.csv")
-write.csv(struc_P, "results/struc_P.csv")
-write.csv(struc_K, "results/struc_K.csv")
-write.csv(struc_B, "results/struc_B.csv")
+#struc_N <- struc_all[yvar == "N",][,c(1:5,11:12,16)]
+#struc_P <- struc_all[yvar == "P",][,c(1:5,11:12,16)]
+# struc_K <- struc_all[yvar == "K",][,c(1:5,11:12,16)]
+# struc_B <- struc_all[yvar == "B",][,c(1:5,11:12,16)]
+
+# write.csv(struc_N, "results/struc_N.csv")
+# #write.csv(struc_P, "results/struc_P.csv")
+# write.csv(struc_K, "results/struc_K.csv")
+# write.csv(struc_B, "results/struc_B.csv")
+
+
+
+# structural pvals
+
+struc_619_all_nut1$date <- "June 19"
+struc_703_all_nut1$date <- "July 3"
+struc_703_all_nut2$date <- "July 3"
+struc_717_all_nut1$date <- "July 17"
+struc_717_all_nut2$date <- "July 17"
+struc_717_all_nut3$date <- "July 17"
+
+struc_619_all_nut1$nutrient <- 1
+struc_703_all_nut1$nutrient <- 1
+struc_703_all_nut2$nutrient <- 2
+struc_717_all_nut1$nutrient <- 1
+struc_717_all_nut2$nutrient <- 2
+struc_717_all_nut3$nutrient <- 3
+
+spec_619_all_nut1$date <- "June 19"
+spec_703_all_nut1$date <- "July 3"
+spec_703_all_nut2$date <- "July 3"
+spec_717_all_nut1$date <- "July 17"
+spec_717_all_nut2$date <- "July 17"
+spec_717_all_nut3$date <- "July 17"
+
+spec_619_all_nut1$nutrient <- 1
+spec_703_all_nut1$nutrient <- 1
+spec_703_all_nut2$nutrient <- 2
+spec_717_all_nut1$nutrient <- 1
+spec_717_all_nut2$nutrient <- 2
+spec_717_all_nut3$nutrient <- 3
+
+spec_struc_619_all_nut1$date <- "June 19"
+spec_struc_703_all_nut1$date <- "July 3"
+spec_struc_703_all_nut2$date <- "July 3"
+spec_struc_717_all_nut1$date <- "July 17"
+spec_struc_717_all_nut2$date <- "July 17"
+spec_struc_717_all_nut3$date <- "July 17"
+
+spec_struc_619_all_nut1$nutrient <- 1
+spec_struc_703_all_nut1$nutrient <- 1
+spec_struc_703_all_nut2$nutrient <- 2
+spec_struc_717_all_nut1$nutrient <- 1
+spec_struc_717_all_nut2$nutrient <- 2
+spec_struc_717_all_nut3$nutrient <- 3
+
+struc_619_all_nut1 <- as.data.table(struc_619_all_nut1)
+struc_703_all_nut1 <- as.data.table(struc_703_all_nut1)
+struc_703_all_nut2 <- as.data.table(struc_703_all_nut2)
+struc_717_all_nut1 <- as.data.table(struc_717_all_nut1)
+struc_717_all_nut2 <- as.data.table(struc_717_all_nut2)
+struc_717_all_nut3 <- as.data.table(struc_717_all_nut3)
+
+struc_pvals_all <- rbind(struc_619_all_nut1,struc_703_all_nut1,struc_703_all_nut2,struc_717_all_nut1,struc_717_all_nut2,struc_717_all_nut3)
+struc_pvals_all$model <- paste(struc_pvals_all$date, "_", struc_pvals_all$nutrient)
+struc_pvals_all <- struc_pvals_all[,c(1:6,9)]
+
+write.csv(struc_pvals_all, "results/struc_pvals_all.csv")
+
+# struc_pvals_N <- struc_pvals_all[column_label == "1",][,c(1:6,9)]
+# #struc_pvals_P <- struc_pvals_all[column_label == "2",][,c(1:6,9)]
+# struc_pvals_K <- struc_pvals_all[column_label == "3",][,c(1:6,9)]
+# struc_pvals_B <- struc_pvals_all[column_label == "4",][,c(1:6,9)]
+# 
+# write.csv(struc_pvals_N, "results/struc_pvals_N.csv")
+# #write.csv(struc_pvals_P, "results/struc_pvals_P.csv")
+# write.csv(struc_pvals_K, "results/struc_pvals_K.csv")
+# write.csv(struc_pvals_B, "results/struc_pvals_B.csv")
 
 # mycolor=gradientColor(low="red",mid="white",high="blue",n=20,plot=TRUE)
 # ztable(struc_N[,c(1:7)]) %>% 
@@ -1502,17 +1590,47 @@ spec_717_nut3 <- as.data.table(spec_717_nut3)
 spec_all <- rbind(spec_619_nut1, spec_703_nut1, spec_703_nut2, spec_717_nut1, spec_717_nut2, spec_717_nut3, fill = T)
 spec_all <- spec_all[spec_all$yvar %in% c("N", "P", "K", "B"),]
 spec_all$model <- paste(spec_all$date, "_", spec_all$nutrient)
+spec_all <- spec_all[,c(1:2,8,9,13)]
 
-spec_N <- spec_all[yvar == "N",][,c(1:2,8,9,13)]
-spec_P <- spec_all[yvar == "P",][,c(1:2,8,9,13)]
-spec_K <- spec_all[yvar == "K",][,c(1:2,8,9,13)]
-spec_B <- spec_all[yvar == "B",][,c(1:2,8,9,13)]
+write.csv(spec_all, "results/spec_all.csv")
+
+# spec_N <- spec_all[yvar == "N",][,c(1:2,8,9,13)]
+# #spec_P <- spec_all[yvar == "P",][,c(1:2,8,9,13)]
+# spec_K <- spec_all[yvar == "K",][,c(1:2,8,9,13)]
+# spec_B <- spec_all[yvar == "B",][,c(1:2,8,9,13)]
+# 
+# 
+# write.csv(spec_N, "results/spec_N.csv")
+# write.csv(spec_P, "results/spec_P.csv")
+# write.csv(spec_K, "results/spec_K.csv")
+# write.csv(spec_B, "results/spec_B.csv")
+# 
+# spectral pvals
+
+spec_619_all_nut1 <- as.data.table(spec_619_all_nut1)
+spec_703_all_nut1 <- as.data.table(spec_703_all_nut1)
+spec_703_all_nut2 <- as.data.table(spec_703_all_nut2)
+spec_717_all_nut1 <- as.data.table(spec_717_all_nut1)
+spec_717_all_nut2 <- as.data.table(spec_717_all_nut2)
+spec_717_all_nut3 <- as.data.table(spec_717_all_nut3)
+
+spec_pvals_all <- rbind(spec_619_all_nut1,spec_703_all_nut1,spec_703_all_nut2,spec_717_all_nut1,spec_717_all_nut2,spec_717_all_nut3)
+spec_pvals_all$model <- paste(spec_pvals_all$date, "_", spec_pvals_all$nutrient)
+spec_pvals_all <- spec_pvals_all[,c(1:6,9)]
+
+write.csv(spec_pvals_all, "results/spec_pvals_all.csv")
+
+# spec_pvals_N <- spec_pvals_all[column_label == "1",][,c(1:6,9)]
+# #spec_pvals_P <- spec_pvals_all[column_label == "2",][,c(1:6,9)]
+# spec_pvals_K <- spec_pvals_all[column_label == "3",][,c(1:6,9)]
+# spec_pvals_B <- spec_pvals_all[column_label == "4",][,c(1:6,9)]
+# 
+# write.csv(spec_pvals_N, "results/spec_pvals_N.csv")
+# #write.csv(spec_pvals_P, "results/spec_pvals_P.csv")
+# write.csv(spec_pvals_K, "results/spec_pvals_K.csv")
+# write.csv(spec_pvals_B, "results/spec_pvals_B.csv")
 
 
-write.csv(spec_N, "results/spec_N.csv")
-write.csv(spec_P, "results/spec_P.csv")
-write.csv(spec_K, "results/spec_K.csv")
-write.csv(spec_B, "results/spec_B.csv")
 
 
 # spectral + structural
@@ -1525,16 +1643,46 @@ spec_struc_717_nut2 <- as.data.table(spec_struc_717_nut2)
 spec_struc_717_nut3 <- as.data.table(spec_struc_717_nut3)
 
 spec_struc_all <- rbind(spec_struc_619_nut1, spec_struc_703_nut1, spec_struc_703_nut2, spec_struc_717_nut1, spec_struc_717_nut2, spec_struc_717_nut3, fill = T)
-spec_struc_all <- spec_struc_all[spec_struc_all$yvar %in% c("N", "P", "K", "B"),]
+spec_struc_all <- spec_struc_all[spec_struc_all$yvar %in% c("N", "K", "B"),]
 spec_struc_all$model <- paste(spec_struc_all$date, "_", spec_struc_all$nutrient)
-
-spec_struc_N <- spec_struc_all[yvar == "N",][,c(1:8,14,15,19)]
-spec_struc_P <- spec_struc_all[yvar == "P",][,c(1:8,14,15,19)]
-spec_struc_K <- spec_struc_all[yvar == "K",][,c(1:8,14,15,19)]
-spec_struc_B <- spec_struc_all[yvar == "B",][,c(1:8,14,15,19)]
+spec_struc_all <- spec_struc_all[,c(1:9,15,16,20)]
 
 
-write.csv(spec_struc_N, "results/spec_struc_N.csv")
-write.csv(spec_struc_P, "results/spec_struc_P.csv")
-write.csv(spec_struc_K, "results/spec_struc_K.csv")
-write.csv(spec_struc_B, "results/spec_struc_B.csv")
+write.csv(spec_struc_all, "results/spec_struc_all.csv")
+
+# spec_struc_N <- spec_struc_all[yvar == "N",][,c(1:8,14,15,19)]
+# #spec_struc_P <- spec_struc_all[yvar == "P",][,c(1:8,14,15,19)]
+# spec_struc_K <- spec_struc_all[yvar == "K",][,c(1:8,14,15,19)]
+# spec_struc_B <- spec_struc_all[yvar == "B",][,c(1:8,14,15,19)]
+# 
+# 
+# write.csv(spec_struc_N, "results/spec_struc_N.csv")
+# #write.csv(spec_struc_P, "results/spec_struc_P.csv")
+# write.csv(spec_struc_K, "results/spec_struc_K.csv")
+# write.csv(spec_struc_B, "results/spec_struc_B.csv")
+
+# spec struc pvals
+
+spec_struc_619_all_nut1 <- as.data.table(spec_struc_619_all_nut1)
+spec_struc_703_all_nut1 <- as.data.table(spec_struc_703_all_nut1)
+spec_struc_703_all_nut2 <- as.data.table(spec_struc_703_all_nut2)
+spec_struc_717_all_nut1 <- as.data.table(spec_struc_717_all_nut1)
+spec_struc_717_all_nut2 <- as.data.table(spec_struc_717_all_nut2)
+spec_struc_717_all_nut3 <- as.data.table(spec_struc_717_all_nut3)
+
+spec_struc_pvals_all <- rbind(spec_struc_619_all_nut1,spec_struc_703_all_nut1,spec_struc_703_all_nut2,spec_struc_717_all_nut1,spec_struc_717_all_nut2,spec_struc_717_all_nut3)
+spec_struc_pvals_all$model <- paste(spec_struc_pvals_all$date, "_", spec_struc_pvals_all$nutrient)
+spec_struc_pvals_all <- spec_struc_pvals_all[,c(1:6,9)]
+
+write.csv(spec_struc_pvals_all, "results/spec_struc_pvals_all.csv")
+
+# spec_struc_pvals_N <- spec_struc_pvals_all[column_label == "1",][,c(1:6,9)]
+# #spec_struc_pvals_P <- spec_struc_pvals_all[column_label == "2",][,c(1:6,9)]
+# spec_struc_pvals_K <- spec_struc_pvals_all[column_label == "3",][,c(1:6,9)]
+# spec_struc_pvals_B <- spec_struc_pvals_all[column_label == "4",][,c(1:6,9)]
+# 
+# write.csv(spec_struc_pvals_N, "results/spec_struc_pvals_N.csv")
+# #write.csv(spec_struc_pvals_P, "results/spec_struc_pvals_P.csv")
+# write.csv(spec_struc_pvals_K, "results/spec_struc_pvals_K.csv")
+# write.csv(spec_struc_pvals_B, "results/spec_struc_pvals_B.csv")
+# 
